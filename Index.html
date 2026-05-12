@@ -42,26 +42,40 @@
         a:hover {
             text-decoration: underline;
         }
-        .folder-icon::before {
-            content: "📁 ";
-        }
+        .folder-icon::before { content: "📁 "; }
+        .file-icon::before { content: "📄 "; }
         .size {
             color: #999;
             font-size: 0.9em;
+            margin-left: 10px;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Index of /</h1>
-        <p>Bem-vindo ao meu GitHub Pages!</p>
+        <p>Painel de Controle - Jader Vieira (Arquiteto & Desenvolvedor)</p>
         
         <ul class="file-list">
             <li><a href="../" class="folder-icon">Parent Directory</a></li>
-            <li><a href="./blog/">Blog</a> <span class="size">- Meus artigos</span></li>
-            <li><a href="./projetos/">Projetos</a> <span class="size">- Projetos pessoais</span></li>
-            <li><a href="./portfolio/">Portfolio</a> <span class="size">- Meu trabalho</span></li>
-            <li><a href="./docs/">Documentação</a> <span class="size">- Documentos</span></li>
+
+            <li>
+                <a href="https://github.com/jaderarqbr/Chaturanga4d" class="folder-icon">Chaturanga4d</a> 
+                <span class="size">- Repositório de Lógica/Jogo</span>
+            </li>
+            <li>
+                <a href="https://github.com/jaderarqbr/Gurpfull" class="folder-icon">Gurpfull</a> 
+                <span class="size">- Projeto de RPG/Sistema</span>
+            </li>
+
+            <li>
+                <a href="./joke-generator.html" class="file-icon">joke-generator.html</a> 
+                <span class="size">- Gerador de Piadas (JS API)</span>
+            </li>
+
+            <li><a href="./blog/" class="folder-icon">Blog</a> <span class="size">- Artigos e Urbanismo</span></li>
+            <li><a href="./portfolio/" class="folder-icon">Portfolio</a> <span class="size">- Projetos Arquitetônicos</span></li>
+            <li><a href="./docs/" class="folder-icon">Documentação</a> <span class="size">- Livros e Manuais</span></li>
         </ul>
     </div>
 </body>
