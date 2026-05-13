@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conversor de Cores Hexadecimal</title>
+    <style>
+        /* CSS: Deixando o visual moderno */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f2f5;
+        }
+
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            text-align: center;
+            width: 350px;
+        }
+
+        h2 { color: #333; margin-bottom: 1.5rem; }
+
+        .color-preview {
+            width: 100%;
+            height: 150px;
+            border-radius: 10px;
+            margin-bottom: 1.5rem;
+            border: 3px solid #eee;
+            transition: background-color 0.3s ease;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        input[type="color"] {
+            width: 100%;
+            height: 50px;
+            border: none;
+            cursor: pointer;
+            background: none;
+        }
+
+        input[type="text"] {
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            text-align: center;
+            text-transform: uppercase;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+
+        label {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: -10px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Paleta Mágica</h2>
+    
+    <div id="preview" class="color-preview" style="background-color: #007bff;"></div>
+
+    <div class="controls">
+        <label>Escolha na paleta:</label>
+        <input type="color" id="colorPicker" value="#007bff">
+
+        <label>Ou digite o Hexadecimal:</label>
+        <input type="text" id="hexInput" placeholder="#000000" maxlength="7" value="#007bff">
+    </div>
+</div>
+
+<script>
+    // JavaScript: A mágica da interatividade
+    const colorPicker = document.getElementById('colorPicker');
+    const hexInput = document.getElementById('hexInput');
+    const preview = document.getElementById('preview');
+
+    // Função para atualizar a cor em todo lugar
+    function updateColor(color) {
+        preview.style.backgroundColor = color;
+        hexInput.value = color.toUpperCase();
+        colorPicker.value = color;
+    }
+
+    // Evento: Quando você move o seletor de cores
+    colorPicker.addEventListener('input', (e) => {
+        const selectedColor = e.target.value;
+        updateColor(selectedColor);
+    });
+
+    // Evento: Quando você digita o código hexadecimal
+    hexInput.addEventListener('input', (e) => {
+        let val = e.target.value;
+        
+        // Adiciona o # automaticamente se o usuário esquecer
+        if (!val.startsWith('#')) {
+            val = '#' + val;
+        }
+
+        // Valida se é um hexadecimal real (ex: #FFF ou #FFFFFF)
+        const hexRegEx = /^#([A-Fa-f0-9]{3}){1,2}$/;
+        
+        if (hexRegEx.test(val)) {
+            preview.style.backgroundColor = val;
+            colorPicker.value = val;
+        }
+    });
+</script>
+
+</body>
+</html>
