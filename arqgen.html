@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SpaceMode Parametric OBJ</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/OBJExporter.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/10.6.4/math.js"></script>
+
+    <style>
+        :root { --primary: #db2777; --bg: #0a0a0a; }
+        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: white; touch-action: none; }
+        
+        /* UI Estilo App Mobile */
+        #ui { 
+            position: absolute; bottom: 0; left: 0; right: 0;
+            background: rgba(20, 20, 20, 0.95); padding: 20px; 
+            border-top: 1px solid #333; border-radius: 20px 20px 0 0;
+            z-index: 100; box-shadow: 0 -5px 20px rgba(0,0,0,0.8);
+        }
+        
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .header h3 { margin: 0; font-size: 1.1rem; color: #bbb; }
+
+        input { 
+            width: 100%; padding: 15px; margin: 10px 0; 
+            border-radius: 10px; border: 1px solid #444; 
+            background: #111; color: #00ff88; 
+            font-family: 'Courier New', monospace; font-weight: bold; font-size: 1.1rem;
+            box-sizing: border-box; outline: none;
+        }
+
+        .actions { display: flex; gap: 10px; }
+        button { 
+            flex: 1; padding: 15px; border-radius: 12px; border: none; 
+            font-weight: bold; font-size: 0.9rem; text-transform: uppercase;
+            transition: 0.2s; cursor: pointer;
+        }
+        
+        .btn-render { background: var(--primary); color: white; }
+        .btn-export { background: #ffffff; color: black; }
+        
+        #canvas-container { position: absolute; top: 0; left: 0; width: 100%; height: 70%; }
+    </style>
+</head>
+<body>
+
+<div id="canvas-container"></div>
+
+<div id="ui">
+    <div class="header">
+        <h3>ARQUITETURA PARAMÉTRICA</h3>
+        <span id="status" style="font-size: 0.7em; color: #666;">v1.0 OBJ</span>
+    </div>
+    
+    <input type="text" id="formula" value="sin(x) * cos(y)" spellcheck="false" autocomplete="off">
+    
+    <div class="actions">
+        <button class="btn-render" onclick="updateModel()">Generate</button>
+        <button class="btn-export" onclick="exportOBJ()">Export .OBJ</button>
+    </div>
+</div>
+
+<script>
+    let scene, camera, renderer, mesh;
+    const container = document.getElementById('canvas-container');
+    const size = 12, res = 40; // Resolução da malha
+
+    init();
+    updateModel();
+
+    function init() {
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0a0a0a);
+
+        camera = new THREE.PerspectiveCamera(75, window.innerWidth / (window.innerHeight * 0.7), 0.1, 1000);
+        camera.position.set(12, 12, 12);
+        camera.lookAt(0, 0, 0);
+
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight * 0.7);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        container.appendChild(renderer.domElement);
+
+        // Luzes para dar volume à forma
+        const light1 = new THREE.DirectionalLight(0xffffff, 1);
+        light1.position.set(10, 20, 10);
+        const light2 = new THREE.PointLight(0xdb2777, 1);
+        light2.position.set(-10, -10, -10);
+        scene.add(light1, light2, new THREE.AmbientLight(0x404040));
+
+        // Grid de referência (Space Mode)
+        const grid = new THREE.GridHelper(size, 12, 0x333333, 0x222222);
+        scene.add(grid);
+    }
+
+    function updateModel() {
+        if (mesh) {
+            scene.remove(mesh);
+            mesh.geometry.dispose();
+            mesh.material.dispose();
+        }
+
+        const formula = document.getElementById('formula').value;
+        const geometry = new THREE.PlaneGeometry(size, size, res, res);
+        const pos = geometry.attributes.position;
+
+        try {
+            const node = math.parse(formula);
+            const code = node.compile();
+
+            for (let i = 0; i < pos.count; i++) {
+                let x = pos.getX(i);
+                let y = pos.getY(i);
+                let z = code.evaluate({x: x, y: y});
+                pos.setZ(i, z);
+            }
+            
+            geometry.computeVertexNormals();
+            
+            const material = new THREE.MeshPhongMaterial({ 
+                color: 0xdb2777, 
+                side: THREE.DoubleSide, 
+                flatShading: false,
+                shininess: 80
+            });
+            
+            mesh = new THREE.Mesh(geometry, material);
+            mesh.rotation.x = -Math.PI / 2; // Alinha com o chão (X,Y -> X,Z)
+            scene.add(mesh);
+            document.getElementById('status').innerText = "RENDERIZADO";
+            document.getElementById('status').style.color = "#0f8";
+        } catch (e) {
+            document.getElementById('status').innerText = "ERRO NA FÓRMULA";
+            document.getElementById('status').style.color = "#f44";
+        }
+    }
+
+    function exportOBJ() {
+        if (!mesh) return;
+        
+        const exporter = new THREE.OBJExporter();
+        const result = exporter.parse(mesh);
+        saveString(result, 'modelo_parametrico.obj');
+    }
+
+    function saveString(text, filename) {
+        const blob = new Blob([text], { type: 'text/plain' });
+        
+        // Estratégia de download para Android
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const link = document.createElement('a');
+            link.href = e.target.result;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        };
+        reader.readAsDataURL(blob);
+    }
+
+    function animate() {
+        requestAnimationFrame(animate);
+        if (mesh) mesh.rotation.z += 0.003; // Rotação orbital lenta
+        renderer.render(scene, camera);
+    }
+    animate();
+
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / (window.innerHeight * 0.7);
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight * 0.7);
+    });
+</script>
+
+</body>
+</html>
