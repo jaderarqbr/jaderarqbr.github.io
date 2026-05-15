@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Simulador Bioclimático - Fortaleza</title>
+    <style>
+        :root { --primary: #0066ff; --secondary: #27ae60; --bg: #f4f7f9; }
+        body { font-family: 'Segoe UI', sans-serif; display: flex; background: var(--bg); margin: 0; color: #333; height: 100vh; }
+        
+        .sidebar { width: 340px; background: white; padding: 20px; box-shadow: 2px 0 15px rgba(0,0,0,0.1); overflow-y: auto; }
+        .main-content { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
+        
+        canvas { background: white; border-radius: 50%; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border: 1px solid #eee; }
+        
+        h3 { border-bottom: 2px solid var(--primary); padding-bottom: 10px; margin-top: 0; }
+        .control-group { margin-bottom: 18px; }
+        label { display: block; font-size: 13px; margin-bottom: 5px; font-weight: bold; color: #555; }
+        
+        input[type="number"], select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        input[type="range"] { width: 100%; cursor: pointer; }
+        
+        .stats { margin-top: 20px; padding: 15px; border-radius: 8px; font-size: 13px; line-height: 1.5; }
+        .horiz-style { background: #eef5ff; border-left: 4px solid var(--primary); }
+        .vert-style { background: #edffef; border-left: 4px solid var(--secondary); }
+        
+        .badge { font-size: 1.4em; font-weight: bold; display: block; margin: 5px 0; }
+        .unit { font-weight: normal; font-size: 12px; color: #666; }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <h3>Configurações</h3>
+        
+        <div class="control-group">
+            <label>Tipo de Brise:</label>
+            <select id="tipoBrise">
+                <option value="horizontal">Horizontal (Veneziana)</option>
+                <option value="vertical" selected>Vertical (Aletas)</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label>Azimute da Fachada: <span id="txtAz">90</span>°</label>
+            <input type="range" id="azimute" min="0" max="360" value="90">
+        </div>
+
+        <div class="control-group">
+            <label>Inclinação das Aletas (Giro): <span id="txtInc">0</span>°</label>
+            <input type="range" id="inclinacao" min="-60" max="60" value="0">
+        </div>
+
+        <hr>
+
+        <div class="control-group">
+            <label>Profundidade (cm):</label>
+            <input type="number" id="profundidade" value="20">
+        </div>
+        
+        <div class="control-group">
+            <label>Vão/Espaçamento (cm):</label>
+            <input type="number" id="vao" value="15">
+        </div>
+
+        <div id="statsPanel" class="stats vert-style">
+            <strong>Análise Resultante:</strong>
+            <span id="eficiencia" class="badge">0%</span>
+            <div id="detalhes">Cálculo de obstrução...</div>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <h2 id="titulo">Carta Solar: Brise Vertical</h2>
+        <canvas id="solarCanvas" width="550" height="550"></canvas>
+    </div>
+
+<script>
+    const canvas = document.getElementById('solarCanvas');
+    const ctx = canvas.getContext('2d');
+    const cx = 275, cy = 275, r = 240;
+
+    const inputs = ['tipoBrise', 'azimute', 'inclinacao', 'profundidade', 'vao'];
+    inputs.forEach(id => document.getElementById(id).addEventListener('input', update));
+
+    function drawBase() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Círculo Horizonte
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.strokeStyle = '#2c3e50';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Linhas de Altitude
+        ctx.setLineDash([2, 4]);
+        ctx.strokeStyle = '#d0d0d0';
+        for (let i = 1; i < 5; i++) {
+            ctx.beginPath();
+            ctx.arc(cx, cy, (r/5) * i, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+        ctx.setLineDash([]);
+
+        // Eixos Cardeais
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - r); ctx.lineTo(cx, cy + r);
+        ctx.moveTo(cx - r, cy); ctx.lineTo(cx + r, cy);
+        ctx.strokeStyle = '#bdc3c7';
+        ctx.stroke();
+
+        ctx.font = "bold 14px Arial";
+        ctx.fillStyle = "#7f8c8d";
+        ctx.fillText("N", cx - 5, cy - r - 10);
+        ctx.fillText("S", cx - 5, cy + r + 20);
+        ctx.fillText("L", cx + r + 10, cy + 5);
+        ctx.fillText("O", cx - r - 25, cy + 5);
+    }
+
+    function update() {
+        drawBase();
+
+        const tipo = document.getElementById('tipoBrise').value;
+        const az = parseInt(document.getElementById('azimute').value);
+        const inc = parseInt(document.getElementById('inclinacao').value);
+        const p = parseFloat(document.getElementById('profundidade').value);
+        const v = parseFloat(document.getElementById('vao').value);
+
+        document.getElementById('txtAz').innerText = az;
+        document.getElementById('txtInc').innerText = inc;
+        document.getElementById('titulo').innerText = `Carta Solar: Brise ${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`;
+
+        const incRad = inc * (Math.PI / 180);
+        const anguloCorteRad = Math.atan(p / v);
+        const eficiencia = (anguloCorteRad / (Math.PI/2)) * 100;
+
+        const panel = document.getElementById('statsPanel');
+        panel.className = `stats ${tipo === 'horizontal' ? 'horiz-style' : 'vert-style'}`;
+        document.getElementById('eficiencia').innerText = eficiencia.toFixed(1) + "%";
+        
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate((az - 90) * Math.PI / 180);
+
+        if (tipo === 'vertical') {
+            // Máscara Vertical com Inclinação
+            ctx.fillStyle = 'rgba(39, 174, 96, 0.3)';
+            
+            // O giro da aleta desloca os ângulos de sombra
+            const startAng = Math.PI - anguloCorteRad + incRad;
+            const endAng = Math.PI + anguloCorteRad + incRad;
+            const startAng2 = -anguloCorteRad + incRad;
+            const endAng2 = anguloCorteRad + incRad;
+
+            // Lado Esquerdo
+            ctx.beginPath();
+            ctx.moveTo(0,0);
+            ctx.arc(0, 0, r, Math.PI, endAng); 
+            ctx.fill();
+
+            // Lado Direito
+            ctx.beginPath();
+            ctx.moveTo(0,0);
+            ctx.arc(0, 0, r, 0, startAng2, true); 
+            ctx.fill();
+
+            // Desenho das Aletas Inclinadas
+            ctx.strokeStyle = '#27ae60';
+            ctx.lineWidth = 2;
+            for(let i = -5; i <= 5; i++) {
+                const xPos = (r/6) * i;
+                ctx.beginPath();
+                ctx.moveTo(xPos, 0);
+                // Projeção vetorial da inclinação
+                ctx.lineTo(xPos + Math.sin(incRad)*p, -Math.cos(incRad)*p);
+                ctx.stroke();
+            }
+
+        } else {
+            // Máscara Horizontal (Tratada como máscara de altitude)
+            ctx.strokeStyle = 'rgba(0, 102, 255, 0.4)';
+            ctx.lineWidth = 15;
+            for (let i = 1; i <= 6; i++) {
+                ctx.beginPath();
+                // A inclinação no horizontal altera a altitude de bloqueio
+                const altitudeOffset = (r/10) * (inc/10);
+                ctx.arc(0, altitudeOffset, (r/7) * i, Math.PI, 0); 
+                ctx.stroke();
+            }
+        }
+
+        // Linha da Fachada
+        ctx.beginPath();
+        ctx.moveTo(-r, 0); ctx.lineTo(r, 0);
+        ctx.strokeStyle = '#e74c3c';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        ctx.restore();
+    }
+
+    update();
+</script>
+</body>
+</html>

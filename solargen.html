@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Simulador de Máscara de Sombra - Fortaleza</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            display: flex; 
+            background: #f4f7f9; 
+            margin: 0;
+            color: #333;
+        }
+        .sidebar {
+            width: 320px;
+            background: white;
+            padding: 25px;
+            box-shadow: 2px 0 15px rgba(0,0,0,0.1);
+            height: 100vh;
+            overflow-y: auto;
+        }
+        .main-content { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        canvas { 
+            background: white; 
+            border-radius: 50%; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1); 
+            border: 1px solid #eee;
+        }
+        .control-group { margin-bottom: 15px; }
+        label { display: block; font-size: 14px; margin-bottom: 5px; font-weight: bold; }
+        input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        .stats { margin-top: 20px; font-size: 13px; color: #333; border-top: 2px solid #0066ff; padding-top: 15px; background: #eef5ff; padding: 10px; border-radius: 4px; }
+        .efficiency-badge { font-size: 1.2em; color: #0066ff; font-weight: bold; display: block; margin-top: 5px; }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <h3>Parâmetros do Brise</h3>
+        
+        <div class="control-group">
+            <label>Azimute da Fachada (0° N - 90° L):</label>
+            <input type="range" id="azimute" min="0" max="360" value="45">
+            <center><span id="valAzimute">45° (Nordeste)</span></center>
+        </div>
+
+        <div class="control-group">
+            <label>Nº de Hastes (Venezianas):</label>
+            <input type="number" id="numHastes" value="8" min="1" max="30">
+        </div>
+        
+        <div class="control-group">
+            <label>Profundidade da Haste (cm):</label>
+            <input type="number" id="profundidade" value="15">
+        </div>
+        
+        <div class="control-group">
+            <label>Tamanho do Vão (Espaçamento cm):</label>
+            <input type="number" id="vao" value="10">
+        </div>
+        
+        <div class="stats" id="info">
+            </div>
+    </div>
+
+    <div class="main-content">
+        <h2>Carta Solar Fortaleza: Análise de Fachada</h2>
+        <canvas id="solarCanvas" width="550" height="550"></canvas>
+    </div>
+
+<script>
+    const canvas = document.getElementById('solarCanvas');
+    const ctx = canvas.getContext('2d');
+    const cx = 275; 
+    const cy = 275; 
+    const r = 240;
+
+    const inputs = ['numHastes', 'profundidade', 'vao', 'azimute'];
+    inputs.forEach(id => {
+        document.getElementById(id).addEventListener('input', draw);
+    });
+
+    function drawBase() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Horizonte
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.strokeStyle = '#2c3e50';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Linhas de Altitude (cada 18°)
+        ctx.setLineDash([5, 5]);
+        ctx.strokeStyle = '#e0e0e0';
+        for (let i = 1; i < 5; i++) {
+            ctx.beginPath();
+            ctx.arc(cx, cy, (r/5) * i, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+        ctx.setLineDash([]);
+
+        // Eixos Cardeais
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - r); ctx.lineTo(cx, cy + r);
+        ctx.moveTo(cx - r, cy); ctx.lineTo(cx + r, cy);
+        ctx.strokeStyle = '#bdc3c7';
+        ctx.stroke();
+    }
+
+    function draw() {
+        drawBase();
+
+        const n = parseInt(document.getElementById('numHastes').value);
+        const p = parseFloat(document.getElementById('profundidade').value);
+        const v = parseFloat(document.getElementById('vao').value);
+        const az = parseInt(document.getElementById('azimute').value);
+
+        // Atualiza label do azimute
+        document.getElementById('valAzimute').innerText = `${az}°`;
+
+        // Cálculo do ângulo alfa de proteção (perfil)
+        const anguloProtecao = Math.atan(p / v) * (180 / Math.PI);
+        
+        // Cálculo Simplificado de Eficiência:
+        // A eficiência baseia-se na profundidade p vs vão v.
+        // Se p >= v, o bloqueio tende a ser muito alto para sol alto (Fortaleza).
+        let eficiencia = (anguloProtecao / 90) * 100;
+        if(eficiencia > 100) eficiencia = 100;
+
+        document.getElementById('info').innerHTML = `
+            <strong>Ângulo de Corte:</strong> ${anguloProtecao.toFixed(1)}° <br>
+            <strong>Bloqueio Estimado:</strong>
+            <span class="efficiency-badge">${eficiencia.toFixed(1)}%</span>
+            <small>Percentual de radiação direta obstruída na fachada.</small>
+        `;
+
+        ctx.save();
+        ctx.translate(cx, cy);
+        
+        // Rotação baseada no Azimute (convertendo para radianos)
+        // Subtraímos 90° pois o 0 do canvas é no eixo Leste
+        ctx.rotate((az - 90) * Math.PI / 180); 
+
+        // Desenho da Máscara de Sombra
+        ctx.strokeStyle = 'rgba(0, 102, 255, 0.5)';
+        ctx.lineWidth = Math.min(p/2, 20); 
+
+        for (let i = 1; i <= n; i++) {
+            ctx.beginPath();
+            const raioArco = (r / (n + 1)) * i;
+            
+            // O arco representa a abertura da fachada (180 graus de visão)
+            // Ajustamos para que a "boca" da máscara acompanhe o azimute
+            ctx.arc(0, 0, raioArco, 0, Math.PI); 
+            ctx.stroke();
+        }
+        
+        // Desenha a linha da fachada para referência
+        ctx.beginPath();
+        ctx.moveTo(-r, 0);
+        ctx.lineTo(r, 0);
+        ctx.strokeStyle = '#e74c3c';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        
+        ctx.restore();
+    }
+
+    draw();
+</script>
+</body>
+</html>
