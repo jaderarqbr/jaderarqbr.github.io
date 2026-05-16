@@ -1,0 +1,187 @@
+Aqui está o código regenerado com os comentários técnicos sugeridos para o seu aprendizado e a atualização da tabela normativa no relatório final.
+```html
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pré-dimensionamento de Laje - NBR 6118</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            background: #fff;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            max-width: 600px;
+            width: 100%;
+        }
+        h2 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 5px; margin-top: 20px; }
+        .row { display: flex; gap: 20px; margin-bottom: 15px; }
+        .col { flex: 1; display: flex; flex-direction: column; }
+        label { margin-bottom: 5px; font-weight: bold; color: #34495e; font-size: 0.9em; }
+        input { padding: 10px; border: 1px solid #ccc; border-radius: 4px; outline-color: #3498db; }
+        button {
+            width: 100%;
+            padding: 15px;
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+        button:hover { background-color: #219150; }
+        #resultado {
+            margin-top: 20px;
+            padding: 15px;
+            background: #fdfefe;
+            border: 1px solid #eee;
+            display: none;
+        }
+        .espessura-alerta { color: red; font-weight: bold; font-size: 1.1em; }
+        .tabela-norma { color: blue; font-size: 0.85em; margin-top: 15px; line-height: 1.4; }
+    </style>
+</head>
+<body>
+
+<div class="container" id="conteudo-pdf">
+    <h2>Materiais</h2>
+    <div class="row">
+        <div class="col">
+            <label>Aço</label>
+            <input type="text" id="aco" value="CA50">
+        </div>
+        <div class="col">
+            <label>fck (kgf/cm²)</label>
+            <input type="number" id="fck" value="250"> 
+        </div>
+    </div>
+
+    <h2>Dimensões</h2>
+    <div class="row">
+        <div class="col">
+            <label>Vão Principal (cm)</label>
+            <input type="number" id="vaoP" value="300">
+        </div>
+        <div class="col">
+            <label>Vão Secundário (cm)</label>
+            <input type="number" id="vaoS" value="500">
+        </div>
+    </div>
+
+    <h2>CARREGAMENTO</h2>
+    <div class="row">
+        <div class="col">
+            <label>1. Permanente (kgf/m²)</label>
+            <input type="number" id="cargaP" value="350">
+        </div>
+        <div class="col">
+            <label>2. Sobrecarga (kgf/m²)</label>
+            <input type="number" id="cargaS" value="150">
+        </div>
+    </div>
+
+    <div id="resultado"></div>
+
+    <button onclick="gerarCalculoEPDF()">Gerar Memória de Cálculo & PDF</button>
+</div>
+
+<script>
+    function gerarCalculoEPDF() {
+        // --- CAPTURA DE DADOS ---
+        const vaoP = parseFloat(document.getElementById('vaoP').value); // Menor vão (lx) - Direção da armadura principal
+        const vaoS = parseFloat(document.getElementById('vaoS').value); // Maior vão (ly)
+        const fck = document.getElementById('fck').value; // fck mínimo de 250 kgf/cm² recomendado para regiões litorâneas
+        const aco = document.getElementById('aco').value; // CA50 é o padrão (500 MPa de resistência)
+        const cargaP = parseFloat(document.getElementById('cargaP').value); // Peso próprio + revestimento (ex: 350 kgf/m²)
+        const cargaS = parseFloat(document.getElementById('cargaS').value); // Carga acidental NBR 6120 (ex: residencial 150 kgf/m²)
+
+        if (!vaoP || !vaoS) {
+            alert("Por favor, preencha as dimensões dos vãos.");
+            return;
+        }
+
+        // --- LÓGICA DE ENGENHARIA ---
+        // Estimativa de rigidez: Menor vão / 40
+        const h_estimado = Math.ceil(vaoP / 40); 
+        
+        // Aplicação do mínimo normativo/prático: 
+        // Embora a norma permita 8cm para piso, 10cm é a melhor prática para conforto e proteção contra corrosão
+        const h_final = h_estimado < 10 ? 10 : h_estimado;
+
+        const cargaTotal = cargaP + cargaS;
+        const area = (vaoP / 100) * (vaoS / 100); // Conversão de cm para m² para cálculo de área
+
+        // --- GERAÇÃO DA MEMÓRIA NO HTML ---
+        const divResultado = document.getElementById('resultado');
+        divResultado.style.display = 'block';
+        divResultado.innerHTML = `
+            <h3>Memória de Cálculo</h3>
+            <p><strong>Material:</strong> Concreto fck ${fck} kgf/cm² | Aço ${aco}</p>
+            <p><strong>Geometria:</strong> Área total de ${area.toFixed(2)} m² (${vaoP}x${vaoS} cm)</p>
+            <p><strong>Carregamento Total:</strong> ${cargaTotal} kgf/m²</p>
+            <p><strong>Cálculo h (L/40):</strong> ${vaoP}/40 = ${h_estimado} cm</p>
+            <p class="espessura-alerta">Espessura Sugerida (h): ${h_final} cm</p>
+            
+            <div class="tabela-norma">
+                <strong>Tipo de Laje - Espessura Mínima (NBR 6118)</strong><br>
+                Lajes de cobertura (não acessíveis): 7 cm<br>
+                Lajes de piso (residencial comum): 8 cm<br>
+                Lajes que suportam veículos (garagens): 10 cm<br>
+                Lajes protendidas: 15 cm
+
+
+ **Peso Específico** do material.
+Para o **Concreto Armado** (concreto + aço), a norma brasileira adota o valor padrão de **2.500\text{ kgf/m}^3**.
+### 1. A Fórmula do Peso Próprio (PP)
+O cálculo é o volume da laje multiplicado pelo peso do material:
+
+**Exemplo de 12\text{ m}^2:**
+ * **Área:** 12\text{ m}^2 (4\text{ m} \times 3\text{ m})
+ * **Espessura (h):** 10\text{ cm} (que deve ser escrita como 0,10\text{ m})
+ * **Peso Específico:** 2.500\text{ kgf/m}^3
+##
+ * **Peso Total:** 3.000\text{ kgf} (O peso de toda a placa de concreto de 12\text{ m}^2).
+ * **Carga por Metro Quadrado (kgf/m^2):** Se dividirmos o peso total pela área (3.000 / 12), temos **250\text{ kgf/m}^2**.
+Portanto, para uma laje de **10\text{ cm}**, o peso "só da laje" é de **250\text{ kgf/m}^2**.
+Se você somar os revestimentos (piso, argamassa e contrapiso), que costumam pesar uns 100\text{ kgf/m}^2, chegamos naquele valor de **350\text{ kgf/m}^2** que usamos no seu código como **Carga Permanente**.
+### Resumo para não esquecer:
+ * Cada **1 cm** de espessura de uma laje maciça pesa **25\text{ kgf}** em cada metro quadrado.
+ * Laje de **7 cm** = 175\text{ kgf/m}^2
+ * Laje de **8 cm** = 200\text{ kgf/m}^2
+ * Laje de **10 cm** = **250\text{ kgf/m}^2**
+**
+
+            </div>
+        `;
+
+        // --- EXPORTAÇÃO PDF ---
+        const elemento = document.getElementById('conteudo-pdf');
+        const opt = {
+            margin:       10,
+            filename:     'Calculo-Laje-NBR6118.pdf',
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2 },
+            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+
+        html2pdf().set(opt).from(elemento).save();
+    }
+</script>
+
+</body>
+</html>
+
+```

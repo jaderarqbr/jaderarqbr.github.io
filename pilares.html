@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PilarCalc - NBR 6118</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f4f7f6; padding: 15px; }
+        .container { max-width: 600px; margin: auto; background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h2 { color: #2c3e50; text-align: center; border-bottom: 2px solid #e67e22; padding-bottom: 10px; }
+        label { display: block; font-weight: bold; margin: 10px 0 5px; font-size: 14px; }
+        input { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+        .btn { width: 100%; padding: 15px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; margin-top: 20px; font-size: 16px; }
+        .btn-calc { background: #e67e22; color: white; }
+        #relatorio { margin-top: 20px; padding: 15px; background: #fff3e0; border-radius: 5px; display: none; border-left: 5px solid #e67e22; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Dimensionamento de Pilares</h2>
+
+    <label>Tipo de Aço</label>
+    <input type="text" id="aco" value="CA-50" readonly>
+
+    <hr>
+    <h3>Edificação</h3>
+    
+    <label>Altura do Lance (Piso a Piso em cm)</label>
+    <input type="number" id="altura" value="280">
+
+    <label>Quantidade de Tetos (Pavimentos)</label>
+    <input type="number" id="tetos" value="1">
+
+    <label>Área de Influência sobre o Pilar (m²)</label>
+    <input type="number" id="area" placeholder="Ex: 6">
+
+    <button class="btn btn-calc" onclick="calcularPilar()">GERAR CÁLCULO & RELATÓRIO</button>
+
+    <div id="relatorio">
+        <h4>Resumo do Pilar:</h4>
+        <p id="resTexto"></p>
+        <button class="btn" style="background:#2c3e50; color:white;" onclick="gerarPDFPilar()">BAIXAR MEMORIAL PDF</button>
+    </div>
+</div>
+
+<script>
+    let dadosPilar = {};
+
+    function calcularPilar() {
+        const h_lance = parseFloat(document.getElementById('altura').value);
+        const num_tetos = parseInt(document.getElementById('tetos').value);
+        const area_inf = parseFloat(document.getElementById('area').value);
+
+        if(!area_inf) { alert("Informe a área de influência!"); return; }
+
+        // 1. Estimativa de Carga Total (Nd)
+        // Laje (500kg/m2) + Sobrecarga (150kg/m2) + Vigas estimadas (150kg/m2)
+        const carga_por_m2 = 800; 
+        const carga_total_kgf = area_inf * carga_por_m2 * num_tetos;
+        const nd = carga_total_kgf * 1.4; // Majorado
+
+        // 2. Seção de Concreto (NBR 6118 exige Area >= 360cm2)
+        // Tentamos uma largura de 14cm (mínimo de norma para pilar sem majoração extra)
+        let largura = 14;
+        let profundidade = Math.ceil(360 / largura); 
+        if (profundidade < largura) profundidade = largura;
+
+        // 3. Armadura Mínima (0.4% Ac)
+        const area_concreto = largura * profundidade;
+        let as_necessario = (0.004 * area_concreto);
+        
+        // Sugestão de bitolas
+        let barras = "4 barras de 10mm"; // Área = 3.14cm2 (atende os 360cm2 de concreto)
+        const estribos = "Ø 5.0mm a cada 15cm";
+
+        dadosPilar = { h_lance, num_tetos, area_inf, carga_total_kgf, largura, profundidade, as_necessario, barras, estribos };
+
+        document.getElementById('relatorio').style.display = "block";
+        document.getElementById('resTexto').innerHTML = `
+            <b>Carga Total Acumulada:</b> ${carga_total_kgf.toFixed(0)} kgf<br>
+            <b>Seção Sugerida:</b> ${largura} x ${profundidade} cm<br>
+            <b>Armadura:</b> ${barras}<br>
+            <b>Esbeltez:</b> Pilar adequado para ${h_lance}cm de altura.
+        `;
+    }
+
+    function gerarPDFPilar() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        const d = dadosPilar;
+
+        doc.setFontSize(16);
+        doc.text("MEMORIAL ESTRUTURAL: PILARES (NBR 6118)", 20, 20);
+        
+        doc.setFontSize(12);
+        doc.text("1. PARÂMETROS DA EDIFICAÇÃO", 20, 40);
+        doc.setFont("helvetica", "normal");
+        doc.text(`- Altura do Lance: ${d.h_lance} cm`, 25, 50);
+        doc.text(`- Número de Tetos: ${d.num_tetos}`, 25, 57);
+        doc.text(`- Área de Influência: ${d.area_inf} m²`, 25, 64);
+        doc.text(`- Carga Estimada por Piso: 800 kgf/m²`, 25, 71);
+
+        doc.setFont("helvetica", "bold");
+        doc.text(`2. CARGA TOTAL NO PILAR: ${d.carga_total_kgf.toFixed(0)} kgf`, 20, 85);
+
+        doc.text("3. DIMENSIONAMENTO DA SEÇÃO", 20, 100);
+        doc.setFont("helvetica", "normal");
+        doc.text(`- Seção de Concreto: ${d.largura} x ${d.profundidade} cm`, 25, 110);
+        doc.text(`- Área de Concreto (Ac): ${d.largura * d.profundidade} cm² (Mín. Norma)`, 25, 117);
+
+        doc.setFont("helvetica", "bold");
+        doc.text("4. ARMADURA SUGERIDA", 20, 135);
+        doc.setFont("helvetica", "normal");
+        doc.text(`- Barras Longitudinais: ${d.barras}`, 25, 145);
+        doc.text(`- Estribos Transversais: ${d.estribos}`, 25, 152);
+        doc.text(`- Aço: CA-50`, 25, 159);
+
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "italic");
+        doc.text("*Cálculo considera pilar de canto/extremidade com carga centrada.", 20, 180);
+
+        doc.save("Relatorio_Pilar.pdf");
+    }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora NBR 6118 - Vigas</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; padding: 15px; color: #333; }
+        .container { max-width: 600px; margin: auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h2 { color: #1a3a5f; text-align: center; border-bottom: 3px solid #3498db; padding-bottom: 10px; margin-bottom: 25px; }
+        h3 { color: #2c3e50; font-size: 1.1em; margin-top: 20px; border-left: 4px solid #3498db; padding-left: 10px; }
+        .row { display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 10px; }
+        .col { flex: 1; min-width: 140px; }
+        label { display: block; font-weight: 600; margin-bottom: 8px; font-size: 13px; color: #555; }
+        input { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; background: #fafafa; }
+        input[readonly] { background: #eee; }
+        button { width: 100%; padding: 15px; margin-top: 15px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 16px; transition: 0.2s; }
+        .btn-calc { background-color: #27ae60; color: white; }
+        .btn-pdf { background-color: #2980b9; color: white; }
+        #resultado { margin-top: 25px; padding: 20px; background: #f1f9f7; border: 1px solid #d1e9e3; border-radius: 8px; display: none; }
+        .res-item { margin-bottom: 8px; font-size: 15px; }
+        .destaque-peso { color: #e67e22; font-weight: bold; }
+        hr { border: 0; border-top: 1px solid #eee; margin: 20px 0; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>VigCalculistas Pro + Peso</h2>
+
+    <h3>Materiais</h3>
+    <div class="row">
+        <div class="col"><label>Aço Flexão</label><input type="text" value="CA-50" readonly></div>
+        <div class="col"><label>Aço Cisalha.</label><input type="text" value="CA-60" readonly></div>
+    </div>
+    <div class="row">
+        <div class="col"><label>Concreto fck (kgf/cm²)</label><input type="number" id="fck" value="250"></div>
+    </div>
+
+    <hr>
+    <h3>Geometria</h3>
+    <div class="row">
+        <div class="col"><label>Largura (bw) - cm</label><input type="number" id="largura" value="10"></div>
+        <div class="col"><label>Vão da Viga (L) - cm</label><input type="number" id="vao" value="400"></div>
+    </div>
+
+    <hr>
+    <h3>Esforços Solicitantes</h3>
+    <div class="row">
+        <div class="col"><label>Momento Fletor (kgf.m)</label><input type="number" id="momento" placeholder="Ex: 875"></div>
+        <div class="col"><label>Força Cortante (kgf)</label><input type="number" id="cortante" placeholder="Ex: 875"></div>
+    </div>
+
+    <button class="btn-calc" onclick="calcular()">CALCULAR ESTRUTURA</button>
+    <button class="btn-pdf" onclick="gerarPDF()">GERAR PDF COM PESO TOTAL</button>
+
+    <div id="resultado">
+        <h4 style="margin-top:0">Memória de Cálculo:</h4>
+        <div class="res-item" id="resH"></div>
+        <div class="res-item" id="resAs"></div>
+        <div class="res-item destaque-peso" id="resPeso"></div>
+    </div>
+</div>
+
+<script>
+    function calcular() {
+        const fck = parseFloat(document.getElementById('fck').value);
+        const bw = parseFloat(document.getElementById('largura').value);
+        const vao = parseFloat(document.getElementById('vao').value);
+        const mk = parseFloat(document.getElementById('momento').value);
+        const vk = parseFloat(document.getElementById('cortante').value);
+
+        if(!mk || !bw || !vao) { alert("Preencha os campos!"); return null; }
+
+        // 1. Dimensões
+        const h = Math.ceil(vao / 10); 
+        const d = h - 4;
+
+        // 2. Peso Próprio (Volume em m3 * 2500 kgf/m3)
+        // Largura(m) * Altura(m) * Comprimento(m) * 2500
+        const pesoTotal = (bw/100) * (h/100) * (vao/100) * 2500;
+
+        // 3. Área de Aço (As) com armadura mínima
+        const md = (mk * 1.4) * 100;
+        const fyd = 5000 / 1.15;
+        let as = md / (0.8 * d * fyd);
+        const asMin = 0.0015 * bw * h;
+        if (as < asMin) as = asMin;
+
+        // Interface
+        document.getElementById('resultado').style.display = "block";
+        document.getElementById('resH').innerHTML = `<b>Altura (h):</b> ${h} cm | <b>Largura:</b> ${bw} cm`;
+        document.getElementById('resAs').innerHTML = `<b>Área de Aço (As):</b> ${as.toFixed(2)} cm²`;
+        document.getElementById('resPeso').innerHTML = `<b>PESO TOTAL DA VIGA: ${pesoTotal.toFixed(2)} kgf</b>`;
+
+        return { h, d, as: as.toFixed(2), fck, bw, vao, mk, vk, pesoTotal: pesoTotal.toFixed(2) };
+    }
+
+    function gerarPDF() {
+        const res = calcular();
+        if(!res) return;
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+
+        doc.setFontSize(18);
+        doc.text("MEMÓRIA DE CÁLCULO ESTRUTURAL", 20, 20);
+        doc.setFontSize(12);
+        doc.text("1. DADOS TÉCNICOS", 20, 40);
+        doc.setFont("helvetica", "normal");
+        doc.text(`- Geometria: ${res.bw} x ${res.h} cm (Vão: ${res.vao} cm)`, 25, 50);
+        doc.text(`- Momento Fletor: ${res.mk} kgf.m`, 25, 58);
+        
+        doc.setFont("helvetica", "bold");
+        doc.text("2. RESULTADOS", 20, 75);
+        doc.setFont("helvetica", "normal");
+        doc.text(`- Altura Útil (d): ${res.d} cm`, 25, 85);
+        doc.text(`- Área de Aço (As): ${res.as} cm²`, 25, 93);
+        
+        doc.setFillColor(230, 230, 230);
+        doc.rect(20, 105, 170, 15, 'F');
+        doc.setFont("helvetica", "bold");
+        doc.text(`PESO TOTAL ESTIMADO DA VIGA: ${res.pesoTotal} kgf`, 25, 115);
+
+        doc.save(`Viga_Estudo_${res.vao}cm.pdf`);
+    }
+</script>
+</body>
+</html>
