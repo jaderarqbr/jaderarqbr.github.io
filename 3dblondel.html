@@ -1,0 +1,428 @@
+```html
+<!DOCTYPE html>
+<html lang="pt-pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Escadas 3D - Alinhamento Perfeito</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f8fafc; }
+        #three-canvas { width: 100%; height: 550px; border-radius: 16px; cursor: grab; }
+        #three-canvas:active { cursor: grabbing; }
+        .glass-card { background: rgba(30, 41, 59, 0.75); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
+    </style>
+</head>
+<body class="p-4 md:p-8 min-h-screen">
+    <div class="max-w-7xl mx-auto">
+        
+        <!-- Cabeçalho -->
+        <header class="mb-8 border-b border-slate-800 pb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+                <span class="text-blue-500 font-bold text-xs uppercase tracking-widest">Visualização Paramétrica Espacial</span>
+                <h1 class="text-3xl font-extrabold text-white tracking-tight">Calculadora de Escadas 3D</h1>
+                <p class="text-slate-400 text-sm mt-1">Geração de malhas com focagem inteligente e circulação de patamar normatizada.</p>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="exportarOBJ()" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-5 py-2.5 rounded-xl shadow-lg transition-all flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                    Exportar .OBJ
+                </button>
+                <button onclick="gerarPDF()" class="bg-slate-800 hover:bg-slate-700 text-white font-semibold px-5 py-2.5 rounded-xl border border-slate-700 transition-all flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    Relatório PDF
+                </button>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- Painel de Controles -->
+            <div class="space-y-6">
+                <div class="glass-card p-6 rounded-2xl shadow-2xl space-y-5">
+                    <h2 class="text-lg font-bold text-white border-b border-slate-800 pb-3 flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 bg-blue-500 rounded-full animate-pulse"></span>
+                        Geometria & Tipo
+                    </h2>
+
+                    <!-- Seletor de Tipo de Escada (Combobox) -->
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-400 mb-1.5">Tipologia de Escada</label>
+                        <select id="tipoEscada" onchange="calcularEGerar()" class="w-full p-3 bg-slate-900 border border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 text-white font-semibold transition-all outline-none">
+                            <option value="U">Escada em U (180° - Retorno)</option>
+                            <option value="L">Escada em L (90° - Angular)</option>
+                            <option value="Reta">Escada Reta (Linear)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-400 mb-1.5">Altura do Vão (cm)</label>
+                        <input type="number" id="hVao" value="300" oninput="calcularEGerar()" class="w-full p-3 bg-slate-900 border border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 text-white font-semibold transition-all outline-none">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-slate-400 mb-1.5">Espelho Alvo (e)</label>
+                            <input type="number" id="espelhoE" value="18" step="0.1" oninput="calcularEGerar()" class="w-full p-3 bg-slate-900 border border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 text-white font-semibold transition-all outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-slate-400 mb-1.5">Piso Blondel (p)</label>
+                            <input type="number" id="pisoP" readonly class="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl text-slate-400 font-mono font-bold outline-none">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-400 mb-1.5">Posição do Patamar (Nº Degrau)</label>
+                        <input type="number" id="degPatamar" value="9" oninput="calcularEGerar()" class="w-full p-3 bg-slate-900 border border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 text-white font-semibold transition-all outline-none">
+                        <p class="text-[10px] text-slate-400 mt-1.5 italic">Define em qual nível ocorre o descanso.</p>
+                    </div>
+                </div>
+
+                <!-- Painel de Status Técnico -->
+                <div id="statusBox" class="p-5 rounded-2xl border-l-4 glass-card transition-all hidden">
+                    <h3 id="statusMsg" class="font-bold text-sm tracking-wide"></h3>
+                    <p id="blondelVal" class="text-xs text-slate-300 mt-1 font-medium"></p>
+                    <div class="mt-4 pt-3 border-t border-slate-800/50 grid grid-cols-3 gap-2 text-center">
+                        <div class="bg-slate-900/50 p-2 rounded-lg">
+                            <span class="block text-[9px] text-slate-500 uppercase font-bold">Total Degraus</span>
+                            <span id="statDegraus" class="text-sm font-bold text-white">-</span>
+                        </div>
+                        <div class="bg-slate-900/50 p-2 rounded-lg">
+                            <span class="block text-[9px] text-slate-500 uppercase font-bold">Espelho Real</span>
+                            <span id="statEspelho" class="text-sm font-bold text-white">-</span>
+                        </div>
+                        <div class="bg-slate-900/50 p-2 rounded-lg">
+                            <span class="block text-[9px] text-slate-500 uppercase font-bold">Blondel Final</span>
+                            <span id="statBlondel" class="text-sm font-bold text-white">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Janela de Renderização 3D -->
+            <div class="lg:col-span-2">
+                <div class="glass-card p-4 rounded-3xl shadow-2xl overflow-hidden relative">
+                    <div id="three-canvas"></div>
+                    
+                    <!-- Legenda -->
+                    <div class="absolute top-8 left-8 bg-slate-950/80 backdrop-blur-md px-4 py-2.5 rounded-xl border border-slate-800 text-[10px] font-bold uppercase tracking-wider flex gap-4">
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-2.5 h-2.5 bg-blue-500 rounded"></span>
+                            <span>Degraus Standard</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-2.5 h-2.5 bg-indigo-600 rounded"></span>
+                            <span>Patamar Livre</span>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 flex justify-between items-center text-slate-400 text-[10px] font-bold uppercase tracking-widest px-2">
+                        <span>Arrastar: Rodar Câmara • Scroll: Zoom</span>
+                        <span id="infoStair">Pronto</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let scene, camera, renderer, currentGroup;
+        let degrausData = [];
+        let targetRotationY = 0.5;
+        let targetRotationX = 0.4;
+        let currentRotationY = 0.5;
+        let currentRotationX = 0.4;
+
+        window.onload = function() {
+            initThree();
+            calcularEGerar();
+            window.addEventListener('resize', onWindowResize);
+        };
+
+        function initThree() {
+            const container = document.getElementById('three-canvas');
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0f172a);
+
+            camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 1, 10000);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            container.appendChild(renderer.domElement);
+
+            // Iluminação otimizada para realçar degraus
+            scene.add(new THREE.AmbientLight(0xffffff, 0.45));
+            const sun1 = new THREE.DirectionalLight(0xffffff, 0.75);
+            sun1.position.set(300, 800, 400);
+            scene.add(sun1);
+
+            const sun2 = new THREE.DirectionalLight(0x3b82f6, 0.25);
+            sun2.position.set(-300, -200, -300);
+            scene.add(sun2);
+
+            // Grelha de referência no solo
+            const grid = new THREE.GridHelper(2000, 40, 0x334155, 0x1e293b);
+            grid.position.y = -0.5;
+            scene.add(grid);
+
+            // Controlos de arrasto e orientação suave
+            let isDragging = false;
+            let prevMouse = { x: 0, y: 0 };
+            
+            container.addEventListener('mousedown', () => isDragging = true);
+            window.addEventListener('mouseup', () => isDragging = false);
+            container.addEventListener('mousemove', e => {
+                if (isDragging) {
+                    const deltaX = e.offsetX - prevMouse.x;
+                    const deltaY = e.offsetY - prevMouse.y;
+                    targetRotationY += deltaX * 0.007;
+                    targetRotationX += deltaY * 0.007;
+                    targetRotationX = Math.max(-Math.PI/2.5, Math.min(Math.PI/2.5, targetRotationX));
+                }
+                prevMouse = { x: e.offsetX, y: e.offsetY };
+            });
+
+            function animate() {
+                requestAnimationFrame(animate);
+                if (currentGroup) {
+                    currentRotationY += (targetRotationY - currentRotationY) * 0.15;
+                    currentRotationX += (targetRotationX - currentRotationX) * 0.15;
+                    currentGroup.rotation.y = currentRotationY;
+                    currentGroup.rotation.x = currentRotationX;
+                }
+                renderer.render(scene, camera);
+            }
+            animate();
+        }
+
+        function onWindowResize() {
+            const container = document.getElementById('three-canvas');
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        }
+
+        function calcularEGerar() {
+            const tipo = document.getElementById('tipoEscada').value;
+            const hVao = parseFloat(document.getElementById('hVao').value) || 300;
+            const eDesejado = parseFloat(document.getElementById('espelhoE').value) || 18;
+            const patamarIdx = parseInt(document.getElementById('degPatamar').value) || 0;
+
+            // Fórmula de Blondel: 2e + p = 64 => p = 64 - 2e
+            const pReal = 64 - (2 * eDesejado);
+            document.getElementById('pisoP').value = pReal.toFixed(2);
+
+            const numDegraus = Math.round(hVao / eDesejado);
+            const eReal = hVao / numDegraus;
+
+            if (currentGroup) scene.remove(currentGroup);
+            currentGroup = new THREE.Group();
+            degrausData = [];
+
+            const larguraLance = 100; // Largura do degrau (1 metro)
+            const gapCentrall = 10;   // Espaço técnico entre os dois lances no U
+            const profPatamar = 100;  // Comprimento do patamar de descanso (1 metro)
+
+            let curX = 0;
+            let curY = 0;
+            let curZ = 0;
+            let dirZ = 1;  // Sentido longitudinal
+            let dirX = 0;  // Sentido transversal
+
+            const matNormal = new THREE.MeshPhongMaterial({ color: 0x3b82f6, shininess: 35 });
+            const matPatamar = new THREE.MeshPhongMaterial({ color: 0x4f46e5, shininess: 45 });
+
+            for (let i = 1; i <= numDegraus; i++) {
+                const ehPatamar = (i === patamarIdx);
+                let wBox = larguraLance;
+                let hBox = eReal;
+                let lBox = pReal;
+
+                if (ehPatamar) {
+                    if (tipo === 'U') {
+                        wBox = larguraLance * 2 + gapCentrall;
+                        lBox = profPatamar;
+                    } else if (tipo === 'L') {
+                        wBox = profPatamar;
+                        lBox = profPatamar;
+                    } else {
+                        lBox = profPatamar;
+                    }
+                }
+
+                // Ajuste geométrico após a curva no modelo em L
+                if (tipo === 'L' && i > patamarIdx) {
+                    wBox = pReal;
+                    lBox = larguraLance;
+                }
+
+                const geo = new THREE.BoxGeometry(wBox, hBox, lBox);
+                const mesh = new THREE.Mesh(geo, ehPatamar ? matPatamar : matNormal);
+
+                if (ehPatamar) {
+                    if (tipo === 'U') {
+                        // Posiciona o patamar de forma a encostar perfeitamente no fim do primeiro lance.
+                        // O primeiro lance andou até curZ. O patamar estende-se a partir da borda do último degrau.
+                        curZ += (pReal / 2); // Alinha com o final do degrau anterior
+                        curZ += (lBox / 2);  // Ajusta para o centro da caixa do patamar
+                        
+                        mesh.position.set((larguraLance + gapCentrall) / 2, curY + eReal / 2, curZ);
+                        
+                        // Caminhabilidade corrigida: O patamar é de circulação livre.
+                        // O segundo lance inicia exatamente no alinhamento da face de entrada do patamar (recuado).
+                        curZ -= (lBox / 2); // Retorna para a aresta de início do patamar
+                        curZ -= (pReal / 2); // Prepara para recuar o primeiro degrau do segundo lance
+                        
+                        dirZ = -1; // Inverte o percurso
+                        curX = larguraLance + gapCentrall;
+                    } 
+                    else if (tipo === 'L') {
+                        // Patamar de curva em L (90 graus)
+                        curZ += (pReal / 2);
+                        curZ += (lBox / 2);
+                        mesh.position.set(curX, curY + eReal / 2, curZ);
+                        
+                        // Nova direção: o eixo Z é travado, o eixo X começa a subir para o lado.
+                        // Para não invadir a área de circulação, o primeiro degrau após o patamar inicia
+                        // exatamente na aresta lateral de saída do patamar.
+                        curZ -= (lBox / 2); // Mantém o Z travado no alinhamento do patamar
+                        curZ += (larguraLance / 2); // Ajusta para o centro da largura do novo lance
+                        
+                        curX += (wBox / 2); // Move para a aresta de saída lateral do patamar
+                        dirZ = 0;
+                        dirX = 1;
+                    } 
+                    else {
+                        // Reta padrão com patamar
+                        curZ += (pReal / 2);
+                        curZ += (lBox / 2);
+                        mesh.position.set(curX, curY + eReal / 2, curZ);
+                        curZ += (lBox / 2);
+                    }
+                } else {
+                    // Posicionamento de degraus normais
+                    if (tipo === 'L' && i > patamarIdx) {
+                        curX += (wBox / 2) * dirX;
+                        mesh.position.set(curX, curY + eReal / 2, curZ);
+                        curX += (wBox / 2) * dirX;
+                    } else {
+                        curZ += (lBox / 2) * dirZ;
+                        mesh.position.set(curX, curY + eReal / 2, curZ);
+                        curZ += (lBox / 2) * dirZ;
+                    }
+                }
+
+                currentGroup.add(mesh);
+                degrausData.push({ pos: mesh.position.clone(), dim: [wBox, hBox, lBox], ehPatamar });
+                curY += eReal;
+            }
+
+            // CENTRALIZAÇÃO DINÂMICA COMPLETA DO MODELO
+            // Garante que o centro da caixa envolvente da escada esteja no centro da cena (0,0,0)
+            const bbox = new THREE.Box3().setFromObject(currentGroup);
+            const centro = bbox.getCenter(new THREE.Vector3());
+            currentGroup.position.set(-centro.x, -centro.y/2, -centro.z);
+
+            scene.add(currentGroup);
+
+            // AUTO-FOCAGEM DA CÂMARA (Resolve o erro de foco cortado)
+            // Calcula o tamanho da caixa delimitadora real para enquadrar a escada perfeitamente na viewport
+            const size = bbox.getSize(new THREE.Vector3());
+            const maxDim = Math.max(size.x, size.y, size.z);
+            const fov = camera.fov * (Math.PI / 180);
+            let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
+            
+            // Multiplicador de segurança para que a escada inteira caiba na tela com margem
+            cameraZ *= 1.8; 
+            camera.position.set(cameraZ * 0.7, cameraZ * 0.7, cameraZ * 0.7);
+            camera.lookAt(0, 0, 0);
+            camera.updateProjectionMatrix();
+
+            // Atualização dos Painéis de Cálculo e Conformidade
+            const blondel = (2 * eReal + pReal).toFixed(1);
+            const aprovada = (eReal >= 16 && eReal <= 19) && (pReal >= 25 && pReal <= 32);
+            
+            const sBox = document.getElementById('statusBox');
+            sBox.classList.remove('hidden');
+            sBox.className = `p-5 rounded-2xl border-l-4 glass-card ${aprovada ? 'border-emerald-500' : 'border-rose-500'}`;
+            
+            const sMsg = document.getElementById('statusMsg');
+            sMsg.innerText = aprovada ? "MÉTRICAS ATENDIDAS ✅" : "FORA DAS NORMAS TÉCNICAS ⚠️";
+            sMsg.className = aprovada ? "font-bold text-sm text-emerald-400" : "font-bold text-sm text-rose-400";
+            
+            document.getElementById('blondelVal').innerText = aprovada 
+                ? "Este dimensionamento garante uma excelente ergonomia e facilidade de passagem." 
+                : "Ajuste os valores de altura ou espelho para garantir a segurança de caminhabilidade.";
+
+            document.getElementById('statDegraus').innerText = numDegraus;
+            document.getElementById('statEspelho').innerText = eReal.toFixed(1) + " cm";
+            document.getElementById('statBlondel').innerText = blondel;
+
+            document.getElementById('infoStair').innerText = `CONFIGURAÇÃO EM ${tipo} • ${numDegraus} DEGRAUS`;
+        }
+
+        function exportarOBJ() {
+            if (!degrausData.length) return;
+            let obj = `# Escada Parametrizada OBJ - Corrigida e Focada\n# Gerado automaticamente pela Calculadora 3D\n`;
+            let vOffset = 1;
+
+            degrausData.forEach(d => {
+                const [w, h, l] = d.dim;
+                const { x, y, z } = d.pos;
+                const xmin = x - w/2, xmax = x + w/2;
+                const ymin = y - h/2, ymax = y + h/2;
+                const zmin = z - l/2, zmax = z + l/2;
+
+                const v = [
+                    [xmin, ymin, zmin], [xmax, ymin, zmin], [xmax, ymax, zmin], [xmin, ymax, zmin],
+                    [xmin, ymin, zmax], [xmax, ymin, zmax], [xmax, ymax, zmax], [xmin, ymax, zmax]
+                ];
+                v.forEach(p => obj += `v ${p[0].toFixed(4)} ${p[1].toFixed(4)} ${p[2].toFixed(4)}\n`);
+                
+                obj += `f ${vOffset} ${vOffset+1} ${vOffset+2} ${vOffset+3}\n`;
+                obj += `f ${vOffset+4} ${vOffset+5} ${vOffset+6} ${vOffset+7}\n`;
+                obj += `f ${vOffset} ${vOffset+1} ${vOffset+5} ${vOffset+4}\n`;
+                obj += `f ${vOffset+1} ${vOffset+2} ${vOffset+6} ${vOffset+5}\n`;
+                obj += `f ${vOffset+2} ${vOffset+3} ${vOffset+7} ${vOffset+6}\n`;
+                obj += `f ${vOffset+3} ${vOffset} ${vOffset+4} ${vOffset+7}\n`;
+                vOffset += 8;
+            });
+
+            const blob = new Blob([obj], { type: 'text/plain' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `escada_alinhada_${document.getElementById('tipoEscada').value}.obj`;
+            a.click();
+        }
+
+        function gerarPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            const tipo = document.getElementById('tipoEscada').value;
+            const h = document.getElementById('hVao').value;
+            const e = document.getElementById('espelhoE').value;
+            const p = document.getElementById('pisoP').value;
+
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(22);
+            doc.text("Memoria de Calculo de Escada", 20, 30);
+            
+            doc.setFontSize(11);
+            doc.setFont("helvetica", "normal");
+            doc.text(`Tipo de Escada selecionada: Escada em ${tipo}`, 20, 42);
+            doc.text(`Altura do Vao Total: ${h} cm`, 20, 50);
+            doc.text(`Espelho Alvo: ${e} cm`, 20, 58);
+            doc.text(`Piso Calculado (Blondel): ${p} cm`, 20, 66);
+            doc.text(`Total de Degraus Projetados: ${document.getElementById('statDegraus').innerText}`, 20, 74);
+
+            doc.save(`projeto_escada_${tipo}.pdf`);
+        }
+    </script>
+</body>
+</html>
+
+```

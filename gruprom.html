@@ -1,0 +1,340 @@
+```html
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RPG: Ektheon Cadmon - Mundo de Njorn</title>
+    <style>
+        :root {
+            --parchment: #f4e4bc;
+            --ink: #2b1b12;
+            --accent: #8b0000;
+            --border: #4a3728;
+            --btn-bg: #dcb38c;
+        }
+
+        body {
+            background-color: #1a1a1a;
+            color: var(--ink);
+            font-family: 'Georgia', serif;
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        #game-container {
+            background-color: var(--parchment);
+            width: 100%;
+            max-width: 1100px;
+            border: 10px solid var(--border);
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            height: 90vh;
+        }
+
+        /* Área de Narrativa */
+        #narrative-section {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            border-right: 2px solid var(--border);
+            background: rgba(255,255,255,0.2);
+        }
+
+        #log {
+            flex-grow: 1;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            padding-right: 10px;
+        }
+
+        .gal-msg { color: #555; font-style: italic; margin-bottom: 10px; }
+        .game-msg { margin-bottom: 15px; line-height: 1.5; }
+        .system-msg { color: var(--accent); font-weight: bold; border-left: 3px solid var(--accent); padding-left: 5px; }
+        .player-msg { color: #2e5a27; font-weight: bold; margin-bottom: 10px; }
+
+        /* Interface de Input */
+        #input-area {
+            display: flex;
+            gap: 10px;
+            padding-top: 10px;
+            border-top: 2px solid var(--border);
+        }
+
+        input[type="text"] {
+            flex-grow: 1;
+            padding: 12px;
+            border: 2px solid var(--border);
+            background: rgba(255,255,255,0.7);
+            font-family: inherit;
+            outline: none;
+        }
+
+        button.main-btn {
+            padding: 10px 20px;
+            background: var(--border);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        button.main-btn:hover { background: var(--accent); }
+
+        /* Painel Lateral (Fichas) */
+        #sidebar {
+            padding: 15px;
+            background: rgba(0,0,0,0.05);
+            overflow-y: auto;
+            font-size: 0.9em;
+        }
+
+        .stat-block {
+            margin-bottom: 15px;
+            border: 1px solid var(--border);
+            padding: 10px;
+            background: rgba(255,255,255,0.4);
+            position: relative;
+        }
+
+        h3 { border-bottom: 2px solid var(--accent); margin-top: 0; margin-bottom: 10px; font-size: 1.1em; text-transform: uppercase; }
+        
+        .status-container { margin-bottom: 10px; }
+        .status-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+        
+        .status-bar {
+            background: #ccc;
+            height: 12px;
+            width: 100%;
+            border: 1px solid #999;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .hp-fill { background: linear-gradient(to right, #cc0000, #ff4444); height: 100%; transition: 0.3s; }
+        .mana-fill { background: linear-gradient(to right, #0044aa, #0088ff); height: 100%; transition: 0.3s; }
+
+        /* Botões de Controle */
+        .controls {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .btn-ctrl {
+            width: 22px;
+            height: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--btn-bg);
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            user-select: none;
+        }
+
+        .btn-ctrl:hover { background: #c49a6c; }
+        .btn-ctrl:active { transform: scale(0.9); }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .party-member {
+            padding: 5px;
+            border-bottom: 1px dashed var(--border);
+            font-size: 0.85em;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="narrative-section">
+        <div id="log">
+            <div class="gal-msg">GAL: Sistema inicializado. Bem-vindo à Campanha Ektheon Cadmon.</div>
+            <div class="game-msg">O vento sopra frio pelas montanhas de Njorn. Diante de você, o caminho se divide. Antes de começarmos, precisamos definir sua origem.</div>
+        </div>
+        <div id="input-area">
+            <input type="text" id="playerInput" placeholder="Sua ação ou resposta...">
+            <button class="main-btn" onclick="processTurn()">Enviar</button>
+        </div>
+    </div>
+
+    <div id="sidebar">
+        <h3>Ektheon Cadmon</h3>
+        
+        <!-- HP e Mana -->
+        <div class="stat-block">
+            <div class="status-container">
+                <div class="status-header">
+                    <strong>HP: <span id="hp-text">20/20</span></strong>
+                    <div class="controls">
+                        <div class="btn-ctrl" onclick="updateStat('hp', -1)">-</div>
+                        <div class="btn-ctrl" onclick="updateStat('hp', 1)">+</div>
+                    </div>
+                </div>
+                <div class="status-bar"><div id="hp-bar" class="hp-fill" style="width: 100%;"></div></div>
+            </div>
+
+            <div class="status-container">
+                <div class="status-header">
+                    <strong>Mana: <span id="mana-text">10/10</span></strong>
+                    <div class="controls">
+                        <div class="btn-ctrl" onclick="updateStat('mana', -1)">-</div>
+                        <div class="btn-ctrl" onclick="updateStat('mana', 1)">+</div>
+                    </div>
+                </div>
+                <div class="status-bar"><div id="mana-bar" class="mana-fill" style="width: 100%;"></div></div>
+            </div>
+        </div>
+
+        <!-- Rastreamento -->
+        <div class="stat-block">
+            <h3>Rastreamento</h3>
+            <div class="stat-row">
+                <span>Briga: <strong id="briga-val">0</strong></span>
+                <div class="controls">
+                    <div class="btn-ctrl" onclick="updateSkill('briga', -1)">-</div>
+                    <div class="btn-ctrl" onclick="updateSkill('briga', 1)">+</div>
+                </div>
+            </div>
+            <div class="stat-row">
+                <span>Crimes: <strong id="crimes-val">0</strong></span>
+                <div class="controls">
+                    <div class="btn-ctrl" onclick="updateSkill('crimes', -1)">-</div>
+                    <div class="btn-ctrl" onclick="updateSkill('crimes', 1)">+</div>
+                </div>
+            </div>
+            <div class="stat-row">
+                <span>Intimidação: <strong id="intim-val">2</strong></span>
+                <div class="controls">
+                    <div class="btn-ctrl" onclick="updateSkill('intim', -1)">-</div>
+                    <div class="btn-ctrl" onclick="updateSkill('intim', 1)">+</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Moedas -->
+        <div class="stat-block" style="background: rgba(218, 165, 32, 0.2);">
+            <div class="stat-row">
+                <strong>💰 Moedas:</strong>
+                <span id="gold-val" style="font-weight:bold;">0</span>
+                <div class="controls">
+                    <div class="btn-ctrl" onclick="updateGold(-1)">-</div>
+                    <div class="btn-ctrl" onclick="updateGold(1)">+</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="party-info">
+            <h3>Grupo</h3>
+            <div class="party-member">Astra (Niv 4) - HP: 59/60</div>
+            <div class="party-member">Golem (Niv 1) - HP: 100%</div>
+            <div class="party-member">Esqueleto (Niv 2) - Foice</div>
+        </div>
+
+        <div class="stat-block" style="margin-top:10px;">
+            <h3>Missão</h3>
+            <div id="current-quest" style="font-style: italic;">Iniciar Jornada em Njorn</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Estado do Jogo
+    let gameState = {
+        step: 'setup_gender',
+        char: {
+            hp: 20,
+            maxHp: 20,
+            mana: 10,
+            maxMana: 10,
+            gold: 0,
+            skills: {
+                briga: 0,
+                crimes: 0,
+                intim: 2
+            }
+        }
+    };
+
+    const log = document.getElementById('log');
+    const playerInput = document.getElementById('playerInput');
+
+    // Funções de Atualização de Interface
+    function updateStat(type, amt) {
+        if (type === 'hp') {
+            gameState.char.hp = Math.max(0, Math.min(gameState.char.maxHp, gameState.char.hp + amt));
+            document.getElementById('hp-text').innerText = `${gameState.char.hp}/${gameState.char.maxHp}`;
+            document.getElementById('hp-bar').style.width = (gameState.char.hp / gameState.char.maxHp * 100) + '%';
+        } else if (type === 'mana') {
+            gameState.char.mana = Math.max(0, Math.min(gameState.char.maxMana, gameState.char.mana + amt));
+            document.getElementById('mana-text').innerText = `${gameState.char.mana}/${gameState.char.maxMana}`;
+            document.getElementById('mana-bar').style.width = (gameState.char.mana / gameState.char.maxMana * 100) + '%';
+        }
+    }
+
+    function updateSkill(skill, amt) {
+        gameState.char.skills[skill] = Math.max(0, gameState.char.skills[skill] + amt);
+        document.getElementById(`${skill}-val`).innerText = gameState.char.skills[skill];
+    }
+
+    function updateGold(amt) {
+        gameState.char.gold = Math.max(0, gameState.char.gold + amt);
+        document.getElementById('gold-val').innerText = gameState.char.gold;
+    }
+
+    // Processamento de Turno
+    function processTurn() {
+        const input = playerInput.value.trim();
+        if (!input) return;
+
+        addMessage("Você", input, "player-msg");
+        playerInput.value = "";
+
+        setTimeout(() => {
+            handleGameLogic(input);
+        }, 600);
+    }
+
+    function handleGameLogic(input) {
+        if (gameState.step === 'setup_gender') {
+            addMessage("GAL", "Entendido. Iniciando criação de mundo para o gênero escolhido. Como deseja ser chamado nesta jornada?", "gal-msg");
+            gameState.step = 'setup_name';
+        } else {
+            const response = "Você decide: '" + input + "'. O destino de Njorn começa a se moldar. Role um d20 para sua primeira percepção.";
+            addMessage("Mestre", response, "game-msg");
+            
+            const d20 = Math.floor(Math.random() * 20) + 1;
+            addMessage("Sistema", `Rolagem de Dados: d20 resultou em ${d20}.`, "system-msg");
+        }
+    }
+
+    function addMessage(sender, text, className) {
+        const msg = document.createElement('div');
+        msg.className = className;
+        msg.innerHTML = `<strong>${sender}:</strong> ${text}`;
+        log.appendChild(msg);
+        log.scrollTop = log.scrollHeight;
+    }
+
+    playerInput.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") processTurn();
+    });
+</script>
+
+</body>
+</html>
+
+```
