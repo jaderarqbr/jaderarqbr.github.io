@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora Luminotécnica e Dimensionamento - NBR ISO/CIE 8995-1</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #16a085;
+            --bg: #f5f7fa;
+            --card-bg: #ffffff;
+            --text: #333333;
+            --warning: #f39c12;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 3px solid var(--accent);
+            padding-bottom: 10px;
+        }
+
+        h1 { color: var(--primary); margin-bottom: 5px; font-size: 24px; }
+        p.subtitle { color: #666; font-size: 14px; margin: 0; }
+
+        .card {
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            margin-bottom: 25px;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: var(--primary);
+        }
+
+        select, input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 15px;
+            background-color: #fff;
+            box-sizing: border-box;
+        }
+
+        select:focus, input:focus {
+            border-color: var(--accent);
+            outline: none;
+        }
+
+        button {
+            width: 100%;
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            padding: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background-color: #12876f;
+        }
+
+        /* Estilo do Relatório */
+        #relatorio {
+            display: none;
+            border-left: 5px solid var(--accent);
+            background: #fff;
+        }
+
+        .report-header {
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--primary);
+            text-transform: uppercase;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+
+        .results-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .lux-box {
+            background: #edf2f7;
+            border: 1px solid #cbd5e0;
+            padding: 15px;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .lux-box.highlight {
+            background: #e6fffa;
+            border-color: #319795;
+        }
+
+        .lux-value {
+            font-size: 32px;
+            font-weight: 800;
+            color: var(--primary);
+            display: block;
+        }
+        
+        .lux-box.highlight .lux-value {
+            color: var(--accent);
+        }
+
+        .lux-unit { font-size: 14px; font-weight: 600; color: #4a5568; display: block; margin-bottom: 5px; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+
+        table th, table td {
+            border: 1px solid #e2e8f0;
+            padding: 8px 12px;
+            text-align: left;
+        }
+
+        table th { background-color: #f7fafc; color: var(--primary); }
+
+        .legal-note {
+            font-size: 12px;
+            color: #718096;
+            margin-top: 20px;
+            border-top: 1px dashed #e2e8f0;
+            padding-top: 15px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Memorial de Cálculo Luminotécnico Otimizado</h1>
+        <p class="subtitle">Ponderação Ergonômica (NBR ISO/CIE 8995-1) e Estimativa de Carga Lúmen-Watt</p>
+    </header>
+
+    <!-- Formulário de Entrada -->
+    <div class="card">
+        <div class="grid-2">
+            <div class="form-group">
+                <label for="ambiente">1. Local / Atividade:</label>
+                <select id="ambiente"></select>
+            </div>
+            <div class="form-group">
+                <label for="area">2. Área do Ambiente (m²):</label>
+                <input type="number" id="area" value="12" min="1" step="0.1">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="idade">3. Faixa Etária do Observador Predominante:</label>
+            <select id="idade">
+                <option value="-1">Inferior a 40 anos (Peso: -1)</option>
+                <option value="0" selected>De 40 a 55 anos (Peso: 0)</option>
+                <option value="1">Superior a 55 anos (Peso: +1)</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="precisao">4. Velocidade e Precisão da Tarefa:</label>
+            <select id="precisao">
+                <option value="-1">Sem importância / Lazer (Peso: -1)</option>
+                <option value="0" selected>Importante / Trabalho Corrente (Peso: 0)</option>
+                <option value="1">Crítica / Alta Precisão Operacional (Peso: +1)</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="refletancia">5. Refletância de Fundo / Contraste:</label>
+            <select id="refletancia">
+                <option value="-1">Superior a 70% (Fundo muito claro) (Peso: -1)</option>
+                <option value="0" selected>Entre 30% e 70% (Fundo médio) (Peso: 0)</option>
+                <option value="1">Inferior a 30% (Fundo muito escuro) (Peso: +1)</option>
+            </select>
+        </div>
+
+        <button onclick="calcularIluminancia()">Gerar Relatório Técnico de Dimensionamento</button>
+    </div>
+
+    <!-- Container do Relatório Gerado -->
+    <div id="relatorio" class="card">
+        <div class="report-header">Relatório Técnico de Verificação e Carga Lumínica</div>
+        
+        <p>Análise realizada para o ambiente/atividade: <strong id="rep-ambiente">--</strong> com área total de <strong id="rep-area-text">--</strong> m².</p>
+        
+        <!-- Blocos de Resultados Críticos -->
+        <div class="results-container">
+            <div class="lux-box">
+                <span class="lux-unit">Iluminância Requerida</span>
+                <span class="lux-value"><span id="rep-lux">0</span> <small style="font-size:16px">lux</small></span>
+                <span id="rep-degrau" style="font-size:11px; font-weight:600; color:#4a5568; display:block; margin-top:5px;"></span>
+            </div>
+            <div class="lux-box highlight">
+                <span class="lux-unit">Temperatura de Cor Sugerida</span>
+                <span class="lux-value" id="rep-kelvin">--</span>
+                <span id="rep-kelvin-desc" style="font-size:11px; font-weight:600; color:#2c3e50; display:block; margin-top:5px;"></span>
+            </div>
+        </div>
+
+        <div class="results-container" style="margin-top: 0;">
+            <div class="lux-box">
+                <span class="lux-unit">Fluxo Luminoso Total Estimado</span>
+                <span class="lux-value"><span id="rep-lumens-totais">0</span> <small style="font-size:16px">lm</small></span>
+            </div>
+            <div class="lux-box highlight">
+                <span class="lux-unit">Sugestão de Distribuição (LED)</span>
+                <span class="lux-value" id="rep-sugestao-lampadas">--</span>
+            </div>
+        </div>
+
+        <h3>Justificativa Paramétrica dos Pesos</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Fator Analisado</th>
+                    <th>Condição Selecionada</th>
+                    <th>Peso</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Idade do Grupo de Usuários</td>
+                    <td id="rep-cond-idade">--</td>
+                    <td id="rep-peso-idade" style="font-weight:bold;">0</td>
+                </tr>
+                <tr>
+                    <td>Velocidade / Precisão</td>
+                    <td id="rep-cond-precisao">--</td>
+                    <td id="rep-peso-precisao" style="font-weight:bold;">0</td>
+                </tr>
+                <tr>
+                    <td>Refletância de Fundo</td>
+                    <td id="rep-cond-refletancia">--</td>
+                    <td id="rep-peso-refletancia" style="font-weight:bold;">0</td>
+                </tr>
+                <tr style="background:#edf2f7; font-weight:bold;">
+                    <td colspan="2">Fator de Compensação Total (Soma Algébrica):</td>
+                    <td id="rep-soma-total">0</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="legal-note">
+            <p><strong>Nota de Rigor Técnico e Premissas de Cálculo:</strong></p>
+            <ul>
+                <li>Cálculo de iluminância estruturado conforme deslocamento escalar da <strong>ABNT NBR ISO/CIE 8995-1</strong>.</li>
+                <li>O dimensionamento de carga utiliza o <strong>Método dos Lúmens</strong> simplificado, considerando um Fator de Utilização do recinto de $\mu = 0,5$ e Fator de Depreciação / Manutenção de $d = 0,8$.</li>
+                <li>A conversão de potência assume lâmpadas LED comerciais com eficiência luminosa média padrão de $90\text{ lm/W}$. Mudanças no rendimento específico do fabricante alteram a potência nominal necessária.</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<script>
+// Banco de dados expandido com Kelvin e limites normativos
+const bancoAmbientes = {
+    "sala":      { nome: "Sala (Geral / Conversação)", min: 100, med: 150, max: 200, kelvin: "2700K - 3000K", kDesc: "Branco Quente (Aconchegante)" },
+    "estar":     { nome: "Sala de Estar (Leitura / Trabalho Casual)", min: 300, med: 500, max: 750, kelvin: "3000K - 4000K", kDesc: "Neutro / Quente Semifuncional" },
+    "cozinha":   { nome: "Cozinha (Área de Preparação e Bancadas)", min: 300, med: 500, max: 750, kelvin: "4000K - 5000K", kDesc: "Branco Neutro / Frio (Foco e Limpeza)" },
+    "gabinete":  { nome: "Gabinete / Escritório Home-Office", min: 300, med: 500, max: 750, kelvin: "4000K", kDesc: "Branco Neutro (Estimula Concentração)" },
+    "garagem":   { nome: "Garagem / Circulação Interna", min: 75,  med: 100, max: 150, kelvin: "4000K - 6500K", kDesc: "Branco Neutro ou Frio" },
+    "comercio":  { nome: "Comércio (Área de Vendas Geral)", min: 300, med: 500, max: 750, kelvin: "4000K", kDesc: "Branco Neutro (Fidelidade de Cores)" },
+    "clinica":   { nome: "Clínica / Salas de Exame e Consulta", min: 300, med: 500, max: 750, kelvin: "5000K", kDesc: "Branco Frio Clínico" },
+    "industria": { nome: "Indústria (Montagem Geral / Maquinários)", min: 200, med: 300, max: 500, kelvin: "5000K - 6500K", kDesc: "Branco Frio Industrial" },
+    "cirurgico": { nome: "Bloco Cirúrgico (Campo Operatório)", min: 5000, med: 7500, max: 10000, kelvin: "5000K - 5500K", kDesc: "Branco Frio Rigoroso (Alta Reprodução de Cor)" },
+    "costura":   { nome: "Oficina de Costura / Inspeção de Tecidos", min: 750, med: 1000, max: 1500, kelvin: "4000K - 5000K", kDesc: "Branco Neutro/Frio Técnico" }
+};
+
+window.onload = function() {
+    const selectAmbiente = document.getElementById("ambiente");
+    for (let chave in bancoAmbientes) {
+        let opt = document.createElement("option");
+        opt.value = chave;
+        opt.innerText = bancoAmbientes[chave].nome;
+        selectAmbiente.appendChild(opt);
+    }
+};
+
+function calcularIluminancia() {
+    const idAmbiente = document.getElementById("ambiente").value;
+    const area = parseFloat(document.getElementById("area").value) || 1;
+    const pIdade = parseInt(document.getElementById("idade").value);
+    const pPrecisao = parseInt(document.getElementById("precisao").value);
+    const pRefletancia = parseInt(document.getElementById("refletancia").value);
+
+    const dadosAmbiente = bancoAmbientes[idAmbiente];
+    const somaPesos = pIdade + pPrecisao + pRefletancia;
+
+    let luxFinal = 0;
+    let classificacaoDegrau = "";
+
+    if (somaPesos <= -1) {
+        luxFinal = dadosAmbiente.min;
+        classificacaoDegrau = "Degrau: VALOR MÍNIMO (Favorável)";
+    } else if (somaPesos === 0) {
+        luxFinal = dadosAmbiente.med;
+        classificacaoDegrau = "Degrau: VALOR MÉDIO (Padrão)";
+    } else {
+        luxFinal = dadosAmbiente.max;
+        classificacaoDegrau = "Degrau: VALOR MÁXIMO (Crítico)";
+    }
+
+    // --- CÁLCULO MÉTODOS DOS LÚMENS ---
+    // Fluxo = (Lux * Área) / (Fator Utilização * Fator Depreciação)
+    const fu = 0.5; 
+    const fd = 0.8;
+    const lumensTotais = Math.round((luxFinal * area) / (fu * fd));
+    
+    // Potência total LED estimada baseada em eficiência média de 90 lm/W
+    const potenciaTotalWatts = Math.round(lumensTotais / 90);
+
+    // Estruturação da sugestão de arranjo de lâmpadas comerciais LED
+    let arranjoLâmpadas = "";
+    if (lumensTotais < 1200) {
+        // Ambientes pequenos / pouca luz: Lâmpadas Bulbo LED comuns (~9W / 800lm)
+        let qte = Math.ceil(lumensTotais / 800);
+        arranjoLâmpadas = `${qte}x LED Bulbo de 9W`;
+    } else if (lumensTotais >= 1200 && lumensTotais < 4500) {
+        // Painéis de LED ou Plafons embutidos (~18W / 1400lm)
+        let qte = Math.ceil(lumensTotais / 1400);
+        arranjoLâmpadas = `${qte}x Painéis LED de 18W`;
+    } else {
+        // Áreas industriais, costuras pesadas ou blocos cirúrgicos (Luminárias de Alta Potência / Projetores)
+        let qte = Math.ceil(lumensTotais / 3600);
+        arranjoLâmpadas = `${qte}x Luminárias Comerciais LED de 40W`;
+    }
+
+    // --- RENDERIZAÇÃO NO RELATÓRIO ---
+    document.getElementById("rep-ambiente").innerText = dadosAmbiente.nome;
+    document.getElementById("rep-area-text").innerText = area;
+    document.getElementById("rep-lux").innerText = luxFinal;
+    document.getElementById("rep-degrau").innerText = classificacaoDegrau;
+    
+    document.getElementById("rep-kelvin").innerText = dadosAmbiente.kelvin;
+    document.getElementById("rep-kelvin-desc").innerText = dadosAmbiente.kDesc;
+    
+    document.getElementById("rep-lumens-totais").innerText = lumensTotais.toLocaleString('pt-BR');
+    document.getElementById("rep-sugestao-lampadas").innerHTML = `${arranjoLâmpadas} <br><small style="font-size:13px; font-weight:normal; color:#4a5568;">(Carga Total Estimada: ~${potenciaTotalWatts}W)</small>`;
+
+    // Atualiza tabela de justificativas
+    const selIdade = document.getElementById("idade");
+    const selPrecisao = document.getElementById("precisao");
+    const selRefletancia = document.getElementById("refletancia");
+
+    document.getElementById("rep-cond-idade").innerText = selIdade.options[selIdade.selectedIndex].text.split(" (Peso:")[0];
+    document.getElementById("rep-peso-idade").innerText = pIdade > 0 ? `+${pIdade}` : pIdade;
+    document.getElementById("rep-cond-precisao").innerText = selPrecisao.options[selPrecisao.selectedIndex].text.split(" (Peso:")[0];
+    document.getElementById("rep-peso-precisao").innerText = pPrecisao > 0 ? `+${pPrecisao}` : pPrecisao;
+    document.getElementById("rep-cond-refletancia").innerText = selRefletancia.options[selRefletancia.selectedIndex].text.split(" (Peso:")[0];
+    document.getElementById("rep-peso-refletancia").innerText = pRefletancia > 0 ? `+${pRefletancia}` : pRefletancia;
+    document.getElementById("rep-soma-total").innerText = somaPesos > 0 ? `+${somaPesos}` : somaPesos;
+
+    // Exibe o painel com efeito visual
+    document.getElementById("relatorio").style.display = "block";
+    document.getElementById("relatorio").scrollIntoView({ behavior: 'smooth' });
+}
+</script>
+
+</body>
+</html>
