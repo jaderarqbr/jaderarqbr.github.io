@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Calhas - NBR 10844 (Fortaleza)</title>
+    <style>
+        :root {
+            --primary-color: #0284c7;
+            --primary-hover: #0369a1;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-color: #334155;
+            --border-color: #e2e8f0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            background-color: var(--card-bg);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            width: 100%;
+            max-width: 550px;
+        }
+
+        h2 {
+            color: var(--primary-color);
+            margin-top: 0;
+            text-align: center;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 16px;
+            transition: border-color 0.2s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        button {
+            width: 100%;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .result-box {
+            margin-top: 25px;
+            padding: 20px;
+            background-color: #f0fdf4;
+            border-left: 5px solid #22c55e;
+            border-radius: 4px;
+            display: none;
+        }
+
+        .result-box h3 {
+            margin-top: 0;
+            color: #166534;
+        }
+
+        .result-item {
+            margin-bottom: 10px;
+            font-size: 15px;
+            line-height: 1.5;
+        }
+
+        .highlight {
+            font-weight: bold;
+            color: #15803d;
+        }
+
+        .note {
+            font-size: 12px;
+            color: #64748b;
+            margin-top: 15px;
+            border-top: 1px dashed var(--border-color);
+            padding-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Dimensionamento de Calha Pluvial</h2>
+    
+    <div class="form-group">
+        <label for="intensidade">Intensidade Pluviométrica (mm/h):</label>
+        <input type="number" id="intensidade" value="213" step="any">
+    </div>
+
+    <div class="form-group">
+        <label for="largura">Largura do Telhado / Projeção Horizontal 'a' (metros):</label>
+        <input type="number" id="largura" placeholder="Ex: 5" step="any">
+    </div>
+
+    <div class="form-group">
+        <label for="altura">Altura do Telhado 'h' (metros):</label>
+        <input type="number" id="altura" placeholder="Ex: 1.5" step="any">
+    </div>
+
+    <div class="form-group">
+        <label for="comprimento">Comprimento da Calha 'b' (metros):</label>
+        <input type="number" id="comprimento" placeholder="Ex: 10" step="any">
+    </div>
+
+    <button onclick="calcularCalha()">Calcular Dimensionamento</button>
+
+    <div id="resultado" class="result-box">
+        <h3>Relatório de Dimensionamento</h3>
+        <div class="result-item">Área de Contribuição: <span id="resArea" class="highlight">0</span> m²</div>
+        <div class="result-item">Vazão de Projeto ($Q$): <span id="resVazao" class="highlight">0</span> L/min</div>
+        <div class="result-item">Declividade Recomendada: <span id="resDeclividade" class="highlight">0,5% (Mínimo norma)</span></div>
+        <div class="result-item">Formato Sugerido: <span id="resFormato" class="highlight">Semicircular (U) ou Trapezoidal</span></div>
+        <div class="result-item">Sugestão de Largura da Calha (Útil): <span id="resLarguraCalha" class="highlight">0</span></div>
+        
+        <div class="note">
+            * Nota: Estimativa baseada na Fórmula de Manning para calhas semicirculares comerciais de PVC/Metal rugoso com caimento de 0,5%. Sempre consulte um calculista estrutural/hidráulico para validação do projeto executivo.
+        </div>
+    </div>
+</div>
+
+<script>
+function calcularCalha() {
+    // Captura dos valores dos inputs
+    const I = parseFloat(document.getElementById('intensidade').value);
+    const a = parseFloat(document.getElementById('largura').value);
+    const h = parseFloat(document.getElementById('altura').value);
+    const b = parseFloat(document.getElementById('comprimento').value);
+
+    // Validação simples
+    if (isNaN(I) || isNaN(a) || isNaN(h) || isNaN(b) || a <= 0 || b <= 0) {
+        alert("Por favor, insira valores válidos e maiores que zero em todos os campos geométricos.");
+        return;
+    }
+
+    // 1. Cálculo da Área de Contribuição (Método da ABNT NBR 10844)
+    // Fórmula: A = (a + h/2) * b
+    const area = (a + (h / 2)) * b;
+
+    // 2. Cálculo da Vazão de Projeto (Q) em Litros por minuto
+    // Fórmula: Q = (A * I) / 60
+    const vazao = (area * I) / 60;
+
+    // 3. Estimativa de dimensionamento prático (Largura útil da calha)
+    // Baseado na capacidade de escoamento padrão para declividade de 0,5%
+    let sugestaoLargura = "";
+    
+    if (vazao <= 80) {
+        sugestaoLargura = "Mínimo de 100 mm (Desenvolvimento comercial chapa 25)";
+    } else if (vazao > 80 && vazao <= 180) {
+        sugestaoLargura = "Mínimo de 130 mm (Desenvolvimento comercial chapa 33)";
+    } else if (vazao > 180 && vazao <= 350) {
+        sugestaoLargura = "Mínimo de 150 mm a 200 mm (Desenvolvimento comercial chapa 40)";
+    } else {
+        sugestaoLargura = "Acima de 200 mm (Recomendado calha sob medida industrial / Chapa 50 ou múltiplos condutores de descida)";
+    }
+
+    // Exibição dos resultados na tela
+    document.getElementById('resArea').innerText = area.toFixed(2);
+    document.getElementById('resVazao').innerText = vazao.toFixed(2);
+    document.getElementById('resLarguraCalha').innerText = sugestaoLargura;
+
+    // Torna a caixa de resultados visível
+    document.getElementById('resultado').style.display = 'block';
+}
+</script>
+
+</body>
+</html>

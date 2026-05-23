@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Calculadora de Reservatório Predial - NBR 5626</title>
+    <style>
+        :root {
+            --primary: #0369a1;
+            --secondary: #0ea5e9;
+            --bg: #f0f9ff;
+            --card-bg: #ffffff;
+            --text: #0f172a;
+            --border: #bae6fd;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            padding: 40px 20px;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            max-width: 750px;
+            width: 100%;
+            background: var(--card-bg);
+            padding: 35px;
+            border-radius: 16px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e0f2fe;
+        }
+        h1 {
+            color: var(--primary);
+            font-size: 22px;
+            margin-bottom: 6px;
+            border-bottom: 3px solid var(--secondary);
+            padding-bottom: 8px;
+        }
+        p.subtitle {
+            color: #64748b;
+            margin-bottom: 25px;
+            font-size: 14px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            font-size: 14px;
+            color: #334155;
+        }
+        select, input[type="number"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 15px;
+            background-color: #fff;
+            transition: all 0.2s;
+        }
+        select:focus, input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15);
+        }
+        button {
+            width: 100%;
+            background-color: var(--primary);
+            color: white;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background-color: #0c4a6e;
+        }
+        .result-box {
+            margin-top: 30px;
+            padding: 22px;
+            border-left: 4px solid var(--primary);
+            background-color: #f8fafc;
+            border-radius: 6px;
+            display: none;
+            border: 1px solid #e2e8f0;
+            border-left-width: 5px;
+        }
+        .result-box h3 {
+            color: var(--primary);
+            margin-bottom: 12px;
+            font-size: 16px;
+        }
+        .result-text {
+            font-size: 14.5px;
+            line-height: 1.6;
+        }
+        .dimension-badge {
+            background-color: #e0f2fe;
+            color: #0369a1;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Dimensionamento de Reservatório — NBR 5626</h1>
+    <p class="subtitle">Cálculo de volume útil de armazenamento de água fria e sugestões de dimensões físicas.</p>
+    
+    <div class="form-group">
+        <label for="tipoEdificacao">Tipo de Edificação:</label>
+        <select id="tipoEdificacao">
+            <option value="residencial_medio">Casa / Apartamento (Padrão Médio)</option>
+            <option value="residencial_luxo">Casa de Luxo</option>
+            <option value="hotel_alojamento">Hotéis / Alojamentos</option>
+            <option value="comercio_escritorio">Escritório / Comércio</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label for="populacao">População Estimada (nº de ocupantes/usuários):</label>
+        <input type="number" id="populacao" min="1" value="5">
+    </div>
+
+    <button onclick="calcularVolumeReservatorio()">Gerar Cálculo e Dimensionamento</button>
+
+    <div id="resultado" class="result-box">
+        <h3>Resultado e Parâmetros Técnicos</h3>
+        <div id="resultadoTexto" class="result-text"></div>
+    </div>
+</div>
+
+<script>
+function calcularVolumeReservatorio() {
+    const tipo = document.getElementById('tipoEdificacao').value;
+    const pop = parseInt(document.getElementById('populacao').value) || 0;
+    const resultBox = document.getElementById('resultado');
+    const resultTexto = document.getElementById('resultadoTexto');
+    
+    if (pop <= 0) {
+        alert('Por favor, informe uma população estimada maior que zero.');
+        return;
+    }
+
+    let q = 0; // Consumo per capita (L/pessoa/dia)
+    let t = 2; // Autonomia padrão recomendada em dias
+    let tipoTexto = '';
+
+    switch(tipo) {
+        case 'residencial_medio':
+            q = 200;
+            t = 2;
+            tipoTexto = 'Casa / Apartamento (Padrão Médio)';
+            break;
+        case 'residencial_luxo':
+            q = 350;
+            t = 2;
+            tipoTexto = 'Casa de Luxo';
+            break;
+        case 'hotel_alojamento':
+            q = 120;
+            t = 1; // 1 dia de autonomia + margem de segurança operacional
+            tipoTexto = 'Hotéis / Alojamentos';
+            break;
+        case 'comercio_escritorio':
+            q = 50;
+            t = 1;
+            tipoTexto = 'Escritório / Comércio';
+            break;
+    }
+
+    const volumeLitros = pop * q * t;
+    const volumeMetrosCubicos = volumeLitros / 1000;
+
+    // Lógica para sugestão de dimensões físicas (Largura x Comprimento x Altura Útil)
+    // Arbitra uma altura de lâmina d'água útil confortável para o volume calculado
+    let altura = 1.0; 
+    if (volumeMetrosCubicos <= 1.0) altura = 0.8;
+    else if (volumeMetrosCubicos > 3.0) altura = 1.25;
+    
+    // Proporção de layout clássico em engenharia (Comprimento = 1.5 * Largura)
+    // Fórmula algébrica aplicada: V = L * (1.5 * L) * A => L = sqrt( V / (1.5 * A) )
+    let largura = Math.sqrt(volumeMetrosCubicos / (1.5 * altura));
+    let comprimento = 1.5 * largura;
+
+    textoHtml = `<strong>Norma de Referência:</strong> ABNT NBR 5626 (Sistemas prediais de água fria e água quente)<br>
+                 <strong>Tipologia Analisada:</strong> ${tipoTexto}<br>
+                 <strong>Consumo Diário Per Capita (q):</strong> ${q} litros/pessoa/dia.<br>
+                 <strong>Autonomia de Projeto (T):</strong> ${t} dia(s).<br><br>
+                 
+                 <span style="font-size: 16px; color: #0369a1;"><strong>Volume Total Requerido:</strong> ${volumeLitros.toLocaleString('pt-BR')} Litros (${volumeMetrosCubicos.toFixed(2)} m³)</span><br><br>
+                 
+                 <strong>Sugestão Prática de Geometria Interna (Reservatório Retangular):</strong><br>
+                 Para atingir a capacidade útil exigida de <strong>${volumeLitros.toLocaleString('pt-BR')}L</strong>, sugere-se as seguintes dimensões internas para a lâmina d'água:<br>
+                 • <strong>Largura:</strong> <span class="dimension-badge">${largura.toFixed(2)} m</span><br>
+                 • <strong>Comprimento:</strong> <span class="dimension-badge">${comprimento.toFixed(2)} m</span><br>
+                 • <strong>Altura Útil (Lâmina d'água):</strong> <span class="dimension-badge">${altura.toFixed(2)} m</span><br><br>
+                 
+                 <small style="color: #64748b; display: block; margin-top: 5px;">* Nota Técnica: Lembre-se de adicionar de 10cm a 20cm extras na altura física total das paredes do reservatório como "borda livre" (espaço de ar) acima da boia para evitar transbordamento.</small>`;
+
+    resultTexto.innerHTML = textoHtml;
+    resultBox.style.display = 'block';
+}
+</script>
+</body>
+</html>
