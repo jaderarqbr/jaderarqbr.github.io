@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculador de Carga de Alvenaria - NBR 6120</title>
+    <style>
+        :root {
+            --primary: #2b579a;
+            --secondary: #e2e8f0;
+            --text: #333;
+            --success: #10b981;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f6f9;
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 650px;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin: 0 auto;
+        }
+
+        h2 {
+            color: var(--primary);
+            margin-top: 0;
+            border-bottom: 2px solid var(--secondary);
+            padding-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        select, input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 15px;
+        }
+
+        select:focus, input:focus {
+            border-color: var(--primary);
+            outline: none;
+        }
+
+        .row {
+            display: flex;
+            gap: 15px;
+        }
+
+        .row .form-group {
+            flex: 1;
+        }
+
+        button {
+            width: 100%;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background-color: #1e3d70;
+        }
+
+        .report-box {
+            margin-top: 25px;
+            padding: 20px;
+            background-color: #f8fafc;
+            border-left: 5px solid var(--primary);
+            border-radius: 4px;
+            display: none;
+        }
+
+        .report-box h3 {
+            margin-top: 0;
+            color: var(--primary);
+        }
+
+        .report-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #edf2f7;
+        }
+
+        .report-item:last-child {
+            border-bottom: none;
+        }
+
+        .highlight {
+            font-weight: bold;
+            color: var(--success);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Cálculo de Peso de Parede e Quantitativos</h2>
+    
+    <div class="form-group">
+        <label for="tipoBloco">Tipo de Bloco / Alvenaria (NBR 6120)</label>
+        <select id="tipoBloco">
+            <option value="ceramico">9x19x19 Cerâmico Furado (~150 kgf/m²)</option>
+            <option value="concreto">14x19x39 Concreto Estrutural/Vedação (~250 kgf/m²)</option>
+        </select>
+    </div>
+
+    <div class="row">
+        <div class="form-group">
+            <label for="comprimento">Comprimento da Viga (m)</label>
+            <input type="number" id="comprimento" step="0.01" placeholder="Ex: 4.50" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="altura">Altura (Pé-direito / Piso ao osso) (m)</label>
+            <input type="number" id="altura" step="0.01" placeholder="Ex: 2.80" required>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label for="areaVazada">Área Vazada (Portas/Janelas) (m²)</label>
+        <input type="number" id="areaVazada" step="0.01" value="0.00">
+    </div>
+
+    <button onclick="gerarRelatorio()">Gerar Relatório</button>
+
+    <div id="relatorio" class="report-box">
+        <h3>📋 Relatório Técnico da Parede</h3>
+        <div class="report-item">
+            <span>Área Bruta da Parede:</span>
+            <span id="resAreaBruta">0.00 m²</span>
+        </div>
+        <div class="report-item">
+            <span>Área Descontada (Vãos):</span>
+            <span id="resAreaVazada">0.00 m²</span>
+        </div>
+        <div class="report-item">
+            <span>Área Líquida Efetiva:</span>
+            <span id="resAreaLiquida" style="font-weight: bold;">0.00 m²</span>
+        </div>
+        <div class="report-item">
+            <span>Peso Linear Estimado na Viga:</span>
+            <span id="resPesoLinear">0.00 kgf/m</span>
+        </div>
+        <div class="report-item">
+            <span>Peso Total da Parede (Carga):</span>
+            <span id="resPesoTotal" class="highlight">0.00 kgf (0.00 kN)</span>
+        </div>
+        <div class="report-item">
+            <span>Quantidade de Blocos (+10% quebra):</span>
+            <span id="resQuantidadeBlocos" class="highlight">0 un</span>
+        </div>
+    </div>
+</div>
+
+<script>
+function gerarRelatorio() {
+    // 1. Captura de dados dos inputs
+    const tipoBloco = document.getElementById('tipoBloco').value;
+    const comprimento = parseFloat(document.getElementById('comprimento').value);
+    const altura = parseFloat(document.getElementById('altura').value);
+    const areaVazada = parseFloat(document.getElementById('areaVazada').value) || 0;
+
+    // Validação simples
+    if (isNaN(comprimento) || isNaN(altura) || comprimento <= 0 || altura <= 0) {
+        alert("Por favor, insira valores válidos de comprimento e altura.");
+        return;
+    }
+
+    // 2. Parâmetros técnicos baseados no tipo de bloco
+    let pesoPorM2 = 0; // kgf/m²
+    let blocosPorM2 = 0; // unidades por m²
+
+    if (tipoBloco === 'ceramico') {
+        pesoPorM2 = 150; 
+        blocosPorM2 = 25; 
+    } else if (tipoBloco === 'concreto') {
+        pesoPorM2 = 250;
+        blocosPorM2 = 12.5;
+    }
+
+    // 3. Execução dos cálculos geométricos e de carga
+    const areaBruta = comprimento * altura;
+    
+    // Evitar que a área vazada seja maior que a própria parede
+    const areaLiquida = Math.max(0, areaBruta - areaVazada);
+
+    const pesoTotalKgf = areaLiquida * pesoPorM2;
+    const pesoTotalKN = pesoTotalKgf / 101.971; // Conversão de kgf para kN de acordo com a física estrutural
+    
+    const pesoLinear = (pesoTotalKgf / comprimento);
+
+    // Cálculo de blocos com acréscimo de 10% para perdas/quebras na obra
+    const totalBlocos = Math.ceil((areaLiquida * blocosPorM2) * 1.1);
+
+    // 4. Alimentação dos campos do relatório na tela
+    document.getElementById('resAreaBruta').innerText = areaBruta.toFixed(2) + " m²";
+    document.getElementById('resAreaVazada').innerText = areaVazada.toFixed(2) + " m²";
+    document.getElementById('resAreaLiquida').innerText = areaLiquida.toFixed(2) + " m²";
+    document.getElementById('resPesoLinear').innerText = pesoLinear.toFixed(2) + " kgf/m";
+    document.getElementById('resPesoTotal').innerText = pesoTotalKgf.toFixed(2) + " kgf (" + pesoTotalKN.toFixed(2) + " kN)";
+    document.getElementById('resQuantidadeBlocos').innerText = totalBlocos + " unidades";
+
+    // Mostra o container do relatório
+    document.getElementById('relatorio').style.display = 'block';
+}
+</script>
+
+</body>
+</html>
