@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador de UHC e Dimensionamento Hidrossanitário</title>
+    <style>
+        :root {
+            --primary: #2b6cb0;
+            --primary-hover: #1d4ed8;
+            --bg: #f7fafc;
+            --card-bg: #ffffff;
+            --text: #2d3748;
+            --border: #e2e8f0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--primary);
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+            border: 1px solid var(--border);
+        }
+
+        h2 {
+            font-size: 1.25rem;
+            color: var(--primary);
+            margin-top: 0;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 1rem;
+        }
+
+        .table-equipamentos {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .table-equipamentos th, .table-equipamentos td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .table-equipamentos th {
+            background-color: #edf2f7;
+        }
+
+        .qty-input {
+            width: 60px;
+            padding: 5px;
+            text-align: center;
+        }
+
+        button {
+            display: block;
+            width: 100%;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 15px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background-color: var(--primary-hover);
+        }
+
+        #relatorio {
+            display: none;
+            background: #fff;
+            border-left: 5px solid var(--primary);
+        }
+
+        .result-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .result-item {
+            background: #f8fafc;
+            padding: 15px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+        }
+
+        .result-item strong {
+            color: var(--primary);
+        }
+
+        @media (max-width: 600px) {
+            .result-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Simulador Hidrossanitário (NBR 5626 / 8160)</h1>
+
+    <div class="card">
+        <h2>1. Dados do Reservatório</h2>
+        <div class="form-group">
+            <label for="volumeCaixa">Volume da Caixa d'Água (Litros):</label>
+            <input type="number" id="volumeCaixa" value="1000" min="0" placeholder="Ex: 1000">
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>2. Equipamentos Alimentados e Contribuição</h2>
+        <table class="table-equipamentos">
+            <thead>
+                <tr>
+                    <th width="10%">Ativar</th>
+                    <th>Aparelho Sanitário</th>
+                    <th>UHC (Unitário)</th>
+                    <th width="20%">Quantidade</th>
+                </tr>
+            </thead>
+            <tbody id="listaAparelhos">
+                <tr>
+                    <td><input type="checkbox" id="chk_pia" checked></td>
+                    <td>Pia de Cozinha (Pia)</td>
+                    <td>3.0</td>
+                    <td><input type="number" id="qty_pia" class="qty-input" value="1" min="1"></td>
+                </tr>
+                <tr>
+                    <td><input type="checkbox" id="chk_privada" checked></td>
+                    <td>Vaso Sanitário (Privada com caixa acoplada)</td>
+                    <td>3.0</td>
+                    <td><input type="number" id="qty_privada" class="qty-input" value="1" min="1"></td>
+                </tr>
+                <tr>
+                    <td><input type="checkbox" id="chk_torneira"></td>
+                    <td>Torneira de Lavatório / Uso Geral</td>
+                    <td>0.5</td>
+                    <td><input type="number" id="qty_torneira" class="qty-input" value="1" min="1"></td>
+                </tr>
+                <tr>
+                    <td><input type="checkbox" id="chk_chuveiro" checked></td>
+                    <td>Chuveiro Elétrico / Misturador</td>
+                    <td>2.0</td>
+                    <td><input type="number" id="qty_chuveiro" class="qty-input" value="1" min="1"></td>
+                </tr>
+                <tr>
+                    <td><input type="checkbox" id="chk_ralo" checked></td>
+                    <td>Ralo Sifonado (Recepção de águas cinzas)</td>
+                    <td>2.0</td>
+                    <td><input type="number" id="qty_ralo" class="qty-input" value="1" min="1"></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <button onclick="gerarRelatorio()">Gerar Relatório de Dimensionamento</button>
+
+    <div class="card" id="relatorio">
+        <h2>📊 Relatório Técnico de Dimensionamento</h2>
+        
+        <div class="result-grid">
+            <div class="result-item">
+                <p><strong>Carga de Contribuição Total:</strong> <span id="resUhc">0</span> UHC</p>
+                <p><strong>Vazão Provável Estimada:</strong> <span id="resVazao">0.00</span> L/s</p>
+            </div>
+            <div class="result-item">
+                <p><strong>Autonomia do Reservatório:</strong> <span id="resAutonomia">-</span></p>
+                <p><strong>Capacidade Informada:</strong> <span id="resVol">0</span> Litros</p>
+            </div>
+        </div>
+
+        <h3>📏 Diâmetros Mínimos Recomendados (Segurança)</h3>
+        <div class="result-grid">
+            <div class="result-item">
+                <h4>Esgoto / Sanidade (NBR 8160)</h4>
+                <ul>
+                    <li>Ramal de Descarga Vaso: <strong>100 mm</strong></li>
+                    <li>Ramal de Descarga Pia Cozinha: <strong>50 mm</strong></li>
+                    <li>Ramal de Lavatório/Ralos: <strong>40 mm</strong></li>
+                    <li><strong>Tubo Coletor Principal:</strong> <span id="resCanoEsgoto">100 mm</span></li>
+                </ul>
+            </div>
+            <div class="result-item">
+                <h4>Água Fria (NBR 5626)</h4>
+                <p>Diâmetro mínimo estimado para o Barrilete/Subida principal com base na vazão:</p>
+                <p><strong>Diâmetro Sugerido:</strong> <span id="resCanoAgua">Ref. DN 25 (3/4")</span></p>
+            </div>
+        </div>
+
+        <h3>🍳 Retenção de Gordura</h3>
+        <div class="result-grid">
+            <div class="result-item" style="grid-column: span 2;">
+                <p><strong>Caixa de Gordura Recomendada:</strong> <span id="resGordura">Não requerida</span></p>
+                <small id="obsGordura">Cálculo baseado no número de pias de cozinha ativas que demandam retenção de coloides lipídicos.</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function calcularVazao(uhc) {
+    if (uhc <= 0) return 0;
+    // Fórmula empírica de Hunter para estimativa de vazão provável: Q = 0.3 * sqrt(Somatório UHC)
+    return 0.3 * Math.sqrt(uhc);
+}
+
+function obterDiametroEsgotoColetor(uhc) {
+    // Tabela simplificada NBR 8160 para Coretores Prediais/Subcoletores
+    if (uhc <= 20) return "100 mm (Ocupação ideal de lâmina d'água)";
+    if (uhc <= 180) return "100 mm";
+    if (uhc <= 700) return "150 mm";
+    return "200 mm";
+}
+
+function obterDiametroAguaPrincipal(vazao) {
+    // Estimativa por velocidade máxima de norma (v <= 3m/s), diâmetros comerciais comuns de PVC
+    if (vazao === 0) return "Nenhum fluxo detectado";
+    if (vazao <= 0.25) return "DN 25 (3/4\") - Atende com folga de pressão";
+    if (vazao <= 0.60) return "DN 32 (1\") - Recomendado para manter velocidade estável";
+    if (vazao <= 1.20) return "DN 40 (1 1/4\")";
+    return "DN 50 (1 1/2\") ou superior";
+}
+
+function dimensionarCaixaGordura(piasAtivas, qtdPias) {
+    if (!piasAtivas || qtdPias <= 0) {
+        return "Não requerida (Nenhuma pia de cozinha ativa no ramal)";
+    }
+    
+    // Critérios de dimensionamento NBR 8160
+    if (qtdPias === 1) {
+        return "1 Caixa de Gordura Pequena (CGP) - Capacidade de retenção de 18 Litros, diâmetro interno nominal mínimo de 300mm.";
+    } else if (qtdPias === 2) {
+        return "1 Caixa de Gordura Simples (CGS) - Capacidade de retenção de 31 Litros, diâmetro interno nominal mínimo de 400mm.";
+    } else {
+        return "1 Caixa de Gordura Dupla (CGD) - Capacidade de retenção de 120 Litros (ideal para fluxos múltiplos ou coletivos).";
+    }
+}
+
+function gerarRelatorio() {
+    // Captura dos elementos
+    const volCaixa = parseFloat(document.getElementById('volumeCaixa').value) || 0;
+    
+    // Definição de pesos UHC unitários
+    const aparelhos = {
+        pia: { chk: 'chk_pia', qty: 'qty_pia', uhc: 3.0 },
+        privada: { chk: 'chk_privada', qty: 'qty_privada', uhc: 3.0 },
+        torneira: { chk: 'chk_torneira', qty: 'qty_torneira', uhc: 0.5 },
+        chuveiro: { chk: 'chk_chuveiro', qty: 'qty_chuveiro', uhc: 2.0 },
+        ralo: { chk: 'chk_ralo', qty: 'qty_ralo', uhc: 2.0 }
+    };
+
+    let uhcTotal = 0;
+    let piasDeCozinhaAtivas = false;
+    let qtdPiasCozinha = 0;
+
+    // Iteração e cálculo do somatório
+    for (let key in aparelhos) {
+        const isChecked = document.getElementById(aparelhos[key].chk).checked;
+        if (isChecked) {
+            const qtd = parseInt(document.getElementById(aparelhos[key].qty).value) || 0;
+            if (qtd > 0) {
+                uhcTotal += aparelhesUhc = aparelhos[key].uhc * qtd;
+                
+                if (key === 'pia') {
+                    piasDeCozinhaAtivas = true;
+                    qtdPiasCozinha = qtd;
+                }
+            }
+        }
+    }
+
+    // Cálculos matemáticos de fluxo
+    const vazaoEstimada = calcularVazao(uhcTotal);
+    
+    // Preenchimento de dados textuais no relatório
+    document.getElementById('resUhc').innerText = uhcTotal.toFixed(1);
+    document.getElementById('resVazao').innerText = vazaoEstimada.toFixed(2);
+    document.getElementById('resVol').innerText = volCaixa;
+
+    // Estimativa simples de autonomia 
+    if (volCaixa > 0 && vazaoEstimada > 0) {
+        const minutosAutonomiaContinua = (volCaixa / (vazaoEstimada * 60)).toFixed(1);
+        document.getElementById('resAutonomia').innerText = `~ ${minutosAutonomiaContinua} min de fluxo contínuo provável`;
+    } else {
+        document.getElementById('resAutonomia').innerText = "Volume ou consumo zerado";
+    }
+
+    // Determinação dos diâmetros baseados nas saídas de funções de segurança
+    document.getElementById('resCanoEsgoto').innerText = obterDiametroEsgotoColetor(uhcTotal);
+    document.getElementById('resCanoAgua').innerText = obterDiametroAguaPrincipal(vazaoEstimada);
+    document.getElementById('resGordura').innerText = dimensionarCaixaGordura(piasDeCozinhaAtivas, qtdPiasCozinha);
+
+    // Torna a seção do relatório visível
+    document.getElementById('relatorio').style.display = 'block';
+    
+    // Rolagem suave até os resultados
+    document.getElementById('relatorio').scrollIntoView({ behavior: 'smooth' });
+}
+</script>
+
+</body>
+</html>
