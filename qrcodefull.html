@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Validador & Gerador de Certificados</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
+    <style>
+        :root {
+            --primary: #1e293b;
+            --accent: #2563eb;
+            --success: #16a34a;
+            --bg: #f8fafc;
+            --card: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--primary);
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            background: var(--card);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            box-sizing: border-box;
+        }
+
+        h2 {
+            margin-top: 0;
+            text-align: center;
+            color: var(--primary);
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 10px;
+            font-size: 1.4rem;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            background: #e2e8f0;
+            cursor: pointer;
+            font-weight: bold;
+            border-radius: 6px;
+            transition: 0.2s;
+            font-size: 0.95rem;
+        }
+
+        .tab-btn.active {
+            background: var(--accent);
+            color: white;
+        }
+
+        .panel {
+            display: none;
+        }
+
+        .panel.active {
+            display: block;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 16px;
+            text-transform: uppercase;
+        }
+
+        button.main-btn {
+            width: 100%;
+            padding: 12px;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-bottom: 10px;
+        }
+
+        button.main-btn:hover {
+            background: #1d4ed8;
+        }
+
+        /* Estilização da área do Scanner da biblioteca */
+        #reader {
+            width: 100%;
+            border: 2px dashed #cbd5e1 !important;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #fafafa;
+            margin-bottom: 15px;
+        }
+        
+        #reader button {
+            padding: 8px 12px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+            font-weight: 600;
+        }
+
+        #qrcode-output {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+            padding: 10px;
+            background: #fff;
+        }
+
+        .result-box {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 6px;
+            font-weight: 500;
+            text-align: center;
+            display: none;
+            font-size: 1.1rem;
+        }
+
+        .success { background: #dcfce7; color: #14532d; border: 1px solid #bbf7d0; }
+        .error { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+        
+        .divider {
+            text-align: center;
+            margin: 15px 0;
+            font-weight: bold;
+            color: #94a3b8;
+            position: relative;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('verificador')">Validar Código</button>
+            <button class="tab-btn" onclick="switchTab('gerador')">Painel Admin</button>
+        </div>
+
+        <div id="panel-verificador" class="panel active">
+            <h2>Verificar Originalidade</h2>
+            
+            <div id="reader"></div>
+
+            <div class="divider">OU DIGITE</div>
+
+            <label for="search-code">Código do Certificado:</label>
+            <input type="text" id="search-code" placeholder="Ex: OSF-9534">
+            <button class="main-btn" onclick="verificarCodigoManual()">Verificar Manualmente</button>
+            
+            <div id="result" class="result-box"></div>
+        </div>
+
+        <div id="panel-gerador" class="panel">
+            <h2>Gerador de QR Code</h2>
+            <label for="gen-code">Código do Produto (XXX-0000):</label>
+            <input type="text" id="gen-code" placeholder="Ex: OSF-9534">
+            <button class="main-btn" onclick="gerarQRCode()">Gerar QR Code</button>
+            
+            <div id="qrcode-output"></div>
+        </div>
+    </div>
+
+    <script>
+        // =================================================================
+        // BANCO DE DADOS DOS CERTIFICADOS (Atualize aqui os novos clientes)
+        // =================================================================
+        const bancoCertificados = {
+            "OSF-9534": "Fulano da Silva Pereira",
+            "XYZ-1234": "Beltrano de Souza Santos",
+            "ABC-5678": "Ciclana Oliveira Lima"
+        };
+
+        // =================================================================
+        // LÓGICA DO LEITOR DE QR CODE (CÂMERA E ARQUIVO)
+        // =================================================================
+        
+        function onScanSuccess(decodedText, decodedResult) {
+            // Quando a câmera ou a foto ler o QR Code com sucesso:
+            // Limpa espaços e transforma em maiúsculo automaticamente
+            const codigoDetectado = decodedText.trim().toUpperCase();
+            
+            // Preenche o campo de texto visualmente com o código lido
+            document.getElementById('search-code').value = codigoDetectado;
+            
+            // Executa a validação
+            processarValidacao(codigoDetectado);
+        }
+
+        function onScanFailure(error) {
+            // Erros de leitura contínuos enquanto a câmera foca são normais, ignoramos.
+        }
+
+        // Inicializa o leitor da biblioteca html5QrCode
+        let html5QrcodeScanner = new Html5QrcodeScanner(
+            "reader", 
+            { 
+                fps: 10, 
+                qrbox: {width: 250, height: 250},
+                rememberLastUsedCamera: true
+            },
+            /* verbose= */ false
+        );
+        html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+
+
+        // =================================================================
+        // LÓGICA DE VALIDAÇÃO E INTERFACE
+        // =================================================================
+
+        function verificarCodigoManual() {
+            const codigoInput = document.getElementById('search-code').value.trim().toUpperCase();
+            processarValidacao(codigoInput);
+        }
+
+        // Função central que checa se o código existe no seu banco de dados
+        function processarValidacao(codigo) {
+            if (!codigo) {
+                exibirResultado("Por favor, insira ou escaneie um código.", "error");
+                return;
+            }
+
+            if (bancoCertificados[codigo]) {
+                const dono = bancoCertificados[codigo];
+                exibirResultado(`✅ ORIGINAL!<br><br>Este certificado pertence a:<br><strong>${dono}</strong>.`, "success");
+            } else {
+                exibirResultado("❌ ATENÇÃO:<br>Código não encontrado ou certificado não original!", "error");
+            }
+        }
+
+        function exibirResultado(mensagem, tipo) {
+            const resultBox = document.getElementById('result');
+            resultBox.innerHTML = mensaje = mensagem;
+            resultBox.className = `result-box ${tipo}`;
+            resultBox.style.display = 'block';
+            
+            // Rola a página até o resultado para facilitar visualização no celular
+            resultBox.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Alternador de abas (Tabs)
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.panel').forEach(panel => panel.classList.remove('active'));
+            
+            if(tabName === 'verificador') {
+                document.querySelectorAll('.tab-btn')[0].classList.add('active');
+                document.getElementById('panel-verificador').classList.add('active');
+            } else {
+                document.querySelectorAll('.tab-btn')[1].classList.add('active');
+                document.getElementById('panel-gerador').classList.add('active');
+            }
+        }
+
+        // Função do painel Admin para gerar o QR Code
+        let qrcode = null;
+        function gerarQRCode() {
+            const codigoGen = document.getElementById('gen-code').value.trim().toUpperCase();
+            const containerQr = document.getElementById('qrcode-output');
+            
+            if (!codigoGen) {
+                alert("Digite um código para gerar o QR Code.");
+                return;
+            }
+
+            containerQr.innerHTML = "";
+
+            qrcode = new QRCode(containerQr, {
+                text: codigoGen,
+                width: 200,
+                height: 200,
+                colorDark : "#1e293b",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.H
+            });
+        }
+    </script>
+</body>
+</html>
