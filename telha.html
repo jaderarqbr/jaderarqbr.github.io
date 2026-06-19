@@ -1,0 +1,526 @@
+```html
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Piso e Telhado - Normas ABNT</title>
+    <!-- Tailwind CSS para um visual moderno e limpo -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons para deixar a interface profissional -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-gradient-to-r from-blue-700 to-indigo-800 text-white shadow-md py-6 px-4">
+        <div class="max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="p-2.5 bg-white/10 rounded-lg">
+                    <i data-lucide="calculator" class="w-8 h-8 text-white"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold tracking-tight">Calculadora de Materiais</h1>
+                    <p class="text-xs text-blue-200 font-medium">Dimensionamento técnico baseado nas normas ABNT NBR 13753 & NBR 15310</p>
+                </div>
+            </div>
+            <div class="text-xs bg-blue-900/40 border border-blue-400/30 rounded-lg p-2 text-right hidden md:block">
+                <strong>NBR 13753:</strong> Revestimento de Piso Cerâmico<br>
+                <strong>NBR 15310:</strong> Telhas e Coberturas Cerâmicas
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow max-w-4xl w-full mx-auto p-4 md:py-8">
+        
+        <!-- Seletor de Tipo (Abas) -->
+        <div class="grid grid-cols-2 gap-2 mb-6 bg-slate-200/60 p-1.5 rounded-xl">
+            <button id="btn-piso" onclick="switchTab('piso')" class="flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-semibold text-sm transition-all duration-300 shadow-sm bg-white text-blue-700">
+                <i data-lucide="layout-grid" class="w-4 h-4"></i>
+                Piso & Cerâmica
+            </button>
+            <button id="btn-telhado" onclick="switchTab('telhado')" class="flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-semibold text-sm transition-all duration-300 text-slate-600 hover:text-slate-800">
+                <i data-lucide="home" class="w-4 h-4"></i>
+                Telhas & Madeiramento
+            </button>
+        </div>
+
+        <!-- Card de Entrada de Dados -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-6 md:p-8 transition-all duration-300">
+            
+            <!-- SEÇÃO 1: PISO CERÂMICO -->
+            <div id="section-piso" class="space-y-6">
+                <div class="border-b border-slate-100 pb-4">
+                    <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                        <i data-lucide="layout-grid" class="text-blue-600 w-5 h-5"></i>
+                        Cálculo de Revestimento Cerâmico (NBR 13753)
+                    </h2>
+                    <p class="text-sm text-slate-500 mt-1">Determine a quantidade exata de placas considerando as perdas por recortes e rodapés.</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Área Total -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1.5 flex items-center gap-1.5" for="piso-area">
+                            Área a ser revestida (m²)
+                        </label>
+                        <div class="relative">
+                            <input type="number" id="piso-area" placeholder="Ex: 25.5" step="0.01" min="0.1" class="w-full pl-4 pr-12 py-3 bg-slate-50/50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-medium">
+                            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">m²</span>
+                        </div>
+                    </div>
+
+                    <!-- Tamanho do Piso (Largura) -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1.5" for="piso-largura">
+                            Largura da Placa (m)
+                        </label>
+                        <div class="relative">
+                            <input type="number" id="piso-largura" placeholder="Ex: 0.60" step="0.01" min="0.05" class="w-full pl-4 pr-12 py-3 bg-slate-50/50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-medium">
+                            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">metro</span>
+                        </div>
+                    </div>
+
+                    <!-- Tamanho do Piso (Comprimento) -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1.5" for="piso-comprimento">
+                            Comprimento da Placa (m)
+                        </label>
+                        <div class="relative">
+                            <input type="number" id="piso-comprimento" placeholder="Ex: 0.60" step="0.01" min="0.05" class="w-full pl-4 pr-12 py-3 bg-slate-50/50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-medium">
+                            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">metro</span>
+                        </div>
+                    </div>
+
+                    <!-- Margem de Perda / Descarte -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1.5 flex items-center justify-between" for="piso-perda">
+                            <span>Margem de Descarte / Recortes</span>
+                            <span class="text-xs text-blue-600 font-normal">Recomendado: 10%</span>
+                        </label>
+                        <select id="piso-perda" class="w-full px-4 py-3 bg-slate-50/50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-medium appearance-none">
+                            <option value="5">5% (Assentamento Alinhado Simples)</option>
+                            <option value="10" selected>10% (Padrão e pequenos ajustes)</option>
+                            <option value="15">15% (Diagonal / Espinha de Peixe)</option>
+                            <option value="20">20% (Formatos Grandes / Alta Perda)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SEÇÃO 2: TELHADO E ESTRUTURA -->
+            <div id="section-telhado" class="space-y-6 hidden">
+                <div class="border-b border-slate-100 pb-4">
+                    <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                        <i data-lucide="home" class="text-blue-600 w-5 h-5"></i>
+                        Cálculo de Cobertura & Madeiramento (NBR 15310 & NBR 8039)
+                    </h2>
+                    <p class="text-sm text-slate-500 mt-1">Insira os parâmetros de projeção horizontal, inclinação e dimensões das telhas cerâmicas.</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Área do Telhado (Projeção Plana) -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1.5 flex items-center justify-between" for="telha-area">
+                            <span>Área de Projeção Horizontal (m²)</span>
+                            <span class="text-xs text-slate-400 font-normal">(Área plana no chão)</span>
+                        </label>
+                        <div class="relative">
+                            <input type="number" id="telha-area" placeholder="Ex: 80" step="0.1" min="1" class="w-full pl-4 pr-12 py-3 bg-slate-50/50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-medium">
+                            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">m²</span>
+                        </div>
+                    </div>
+
+                    <!-- Inclinação do Telhado (%) -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1.5 flex items-center justify-between" for="telha-inclinacao">
+                            <span>Inclinação do Telhado (%)</span>
+                            <span class="text-xs text-blue-600 font-normal">Mínimo NBR: 30% a 35%</span>
+                        </label>
+                        <div class="relative">
+                            <input type="number" id="telha-inclinacao" placeholder="Ex: 30" step="1" min="10" max="100" class="w-full pl-4 pr-12 py-3 bg-slate-50/50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-medium">
+                            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">%</span>
+                        </div>
+                        <p class="text-[11px] text-slate-400 mt-1">Ex: 30% significa que o telhado sobe 30cm a cada 1m de base horizontal.</p>
+                    </div>
+
+                    <!-- Comprimento Útil da Telha -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1.5 flex items-center justify-between" for="telha-comp">
+                            <span>Comprimento Útil da Telha (m)</span>
+                            <span class="text-xs text-slate-400 font-normal">(Sem sobreposição)</span>
+                        </label>
+                        <div class="relative">
+                            <input type="number" id="telha-comp" placeholder="Ex: 0.40" step="0.01" min="0.1" class="w-full pl-4 pr-12 py-3 bg-slate-50/50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-medium">
+                            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">metro</span>
+                        </div>
+                    </div>
+
+                    <!-- Largura Útil da Telha -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1.5 flex items-center justify-between" for="telha-larg">
+                            <span>Largura Útil da Telha (m)</span>
+                            <span class="text-xs text-slate-400 font-normal">(Sem sobreposição)</span>
+                        </label>
+                        <div class="relative">
+                            <input type="number" id="telha-larg" placeholder="Ex: 0.22" step="0.01" min="0.1" class="w-full pl-4 pr-12 py-3 bg-slate-50/50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-medium">
+                            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">metro</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Configuração de Madeiramento Extra -->
+                <div class="bg-blue-50/50 rounded-xl p-4 border border-blue-100 mt-4">
+                    <h3 class="text-sm font-bold text-blue-900 mb-2 flex items-center gap-1.5">
+                        <i data-lucide="info" class="w-4 h-4 text-blue-600"></i>
+                        Parâmetros Sugeridos para Madeiramento:
+                    </h3>
+                    <ul class="text-xs text-slate-600 space-y-1 list-disc list-inside">
+                        <li><strong>Vigas:</strong> Distanciamento médio de 1,5m a 2,0m.</li>
+                        <li><strong>Caibros:</strong> Espaçamento sugerido de 50cm a 60cm de eixo a eixo.</li>
+                        <li><strong>Ripas:</strong> A galga (espaçamento) é definida pelo comprimento útil da telha.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Botão de Ação -->
+            <div class="mt-8 pt-6 border-t border-slate-100 flex justify-end">
+                <button onclick="calcular()" class="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold px-8 py-3.5 rounded-xl transition-all duration-200 shadow-md flex items-center justify-center gap-2">
+                    <i data-lucide="file-text" class="w-5 h-5"></i>
+                    Gerar Relatório Técnico
+                </button>
+            </div>
+        </div>
+
+        <!-- Mensagem de erro personalizada (em vez de alert) -->
+        <div id="error-box" class="mt-4 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm font-medium hidden flex items-center gap-2">
+            <i data-lucide="alert-circle" class="w-5 h-5 text-red-500"></i>
+            <span id="error-msg">Por favor, preencha todos os campos obrigatórios corretamente.</span>
+        </div>
+
+        <!-- Resultados do Relatório -->
+        <div id="section-resultado" class="mt-6 hidden scroll-mt-6">
+            <div class="bg-slate-900 text-white rounded-2xl shadow-xl overflow-hidden border border-slate-800">
+                <!-- Topo do Relatório -->
+                <div class="bg-gradient-to-r from-blue-900 to-indigo-950 p-6 border-b border-slate-800 flex items-center justify-between">
+                    <div>
+                        <span class="text-xs font-semibold tracking-wider text-blue-400 uppercase">Memorial de Cálculo</span>
+                        <h3 class="text-xl font-bold mt-0.5">Relatório Técnico Estimativo</h3>
+                    </div>
+                    <button onclick="window.print()" class="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors text-white" title="Imprimir Relatório">
+                        <i data-lucide="printer" class="w-5 h-5"></i>
+                    </button>
+                </div>
+
+                <!-- Conteúdo Dinâmico -->
+                <div class="p-6 md:p-8 space-y-8" id="resultado-conteudo">
+                    <!-- Gerado por JS -->
+                </div>
+
+                <!-- Rodapé do Relatório -->
+                <div class="bg-slate-950/80 p-4 px-6 md:px-8 border-t border-slate-800 text-[11px] text-slate-400 flex flex-col sm:flex-row justify-between gap-2">
+                    <span>Gerado em: <span id="data-relatorio"></span></span>
+                    <span>*Os cálculos servem de referência. Sempre consulte um Engenheiro Civil ou Arquiteto responsável.</span>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer Geral -->
+    <footer class="bg-slate-100 border-t border-slate-200 text-slate-500 text-xs py-6 text-center mt-12">
+        <p>© 2026 Engenharia Prática. Baseado nos padrões e regulamentos brasileiros de segurança e desempenho.</p>
+    </footer>
+
+    <script>
+        // Variável de controle da aba ativa
+        let currentTab = 'piso';
+
+        // Inicializar os ícones do Lucide
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            document.getElementById('data-relatorio').innerText = new Date().toLocaleDateString('pt-BR');
+        });
+
+        function switchTab(tab) {
+            currentTab = tab;
+            
+            // Elementos de Seção
+            const secPiso = document.getElementById('section-piso');
+            const secTelhado = document.getElementById('section-telhado');
+            
+            // Botões do Seletor
+            const btnPiso = document.getElementById('btn-piso');
+            const btnTelhado = document.getElementById('btn-telhado');
+
+            // Resetar erros e resultado anterior ao trocar de aba
+            hideError();
+            document.getElementById('section-resultado').classList.add('hidden');
+
+            if (tab === 'piso') {
+                secPiso.classList.remove('hidden');
+                secTelhado.classList.add('hidden');
+                
+                btnPiso.className = "flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-semibold text-sm transition-all duration-300 shadow-sm bg-white text-blue-700";
+                btnTelhado.className = "flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-semibold text-sm transition-all duration-300 text-slate-600 hover:text-slate-800";
+            } else {
+                secPiso.classList.add('hidden');
+                secTelhado.classList.remove('hidden');
+                
+                btnTelhado.className = "flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-semibold text-sm transition-all duration-300 shadow-sm bg-white text-blue-700";
+                btnPiso.className = "flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-semibold text-sm transition-all duration-300 text-slate-600 hover:text-slate-800";
+            }
+        }
+
+        function showError(msg) {
+            const errorBox = document.getElementById('error-box');
+            const errorMsg = document.getElementById('error-msg');
+            errorMsg.innerText = msg;
+            errorBox.classList.remove('hidden');
+            errorBox.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function hideError() {
+            document.getElementById('error-box').classList.add('hidden');
+        }
+
+        function calcular() {
+            hideError();
+            const resultadoDiv = document.getElementById('section-resultado');
+            const resultadoConteudo = document.getElementById('resultado-conteudo');
+
+            if (currentTab === 'piso') {
+                const area = parseFloat(document.getElementById('piso-area').value);
+                const larg = parseFloat(document.getElementById('piso-largura').value);
+                const comp = parseFloat(document.getElementById('piso-comprimento').value);
+                const perdaPct = parseFloat(document.getElementById('piso-perda').value);
+
+                if (isNaN(area) || area <= 0) {
+                    showError("Por favor, insira uma área válida maior que 0.");
+                    return;
+                }
+                if (isNaN(larg) || larg <= 0 || isNaN(comp) || comp <= 0) {
+                    showError("Por favor, insira dimensões de placa cerâmica válidas.");
+                    return;
+                }
+
+                // Cálculo de Piso
+                const areaPlaca = larg * comp;
+                const placasNecessariasSemPerda = Math.ceil(area / areaPlaca);
+                const areaComPerda = area * (1 + perdaPct / 100);
+                const placasNecessariasComPerda = Math.ceil(areaComPerda / areaPlaca);
+                const placasDescarte = placasNecessariasComPerda - placasNecessariasSemPerda;
+
+                // Recomendações de argamassa e rejunte com base na NBR 13753
+                const consumoArgamassa = area * 5.0; // Consumo aproximado: 5 kg/m² para colagem simples, dupla colagem pode exigir mais
+                const consumoRejunte = area * 0.45; // Consumo aproximado: 0.45 kg/m² dependendo da junta
+
+                resultadoConteudo.innerHTML = `
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <!-- Card Principal -->
+                        <div class="bg-slate-800/80 p-5 rounded-xl border border-slate-700/60 md:col-span-2">
+                            <span class="text-blue-400 text-xs font-semibold">VOLUME ESTIMADO</span>
+                            <h4 class="text-2xl font-bold mt-1 text-white">${placasNecessariasComPerda} Peças</h4>
+                            <p class="text-slate-400 text-xs mt-1">Área total considerada (com perda): <strong>${areaComPerda.toFixed(2)} m²</strong></p>
+                            
+                            <div class="mt-6 border-t border-slate-700/50 pt-4 grid grid-cols-2 gap-4 text-sm">
+                                <div>
+                                    <span class="text-slate-400 block text-xs">Área Unitária do Piso</span>
+                                    <span class="text-white font-semibold">${areaPlaca.toFixed(4)} m² / placa</span>
+                                </div>
+                                <div>
+                                    <span class="text-slate-400 block text-xs">Peças sem descarte</span>
+                                    <span class="text-white font-semibold">${placasNecessariasSemPerda} pçs</span>
+                                </div>
+                                <div>
+                                    <span class="text-slate-400 block text-xs">Placas p/ Recorte / Perda (${perdaPct}%)</span>
+                                    <span class="text-amber-400 font-semibold">+ ${placasDescarte} pçs</span>
+                                </div>
+                                <div>
+                                    <span class="text-slate-400 block text-xs">Tamanho especificado</span>
+                                    <span class="text-white font-semibold">${(larg * 100).toFixed(0)} x ${(comp * 100).toFixed(0)} cm</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Card de Materiais Auxiliares -->
+                        <div class="bg-slate-800/80 p-5 rounded-xl border border-slate-700/60">
+                            <span class="text-indigo-400 text-xs font-semibold">INSUMOS ADICIONAIS</span>
+                            <h4 class="text-lg font-bold mt-1 text-white">Argamassa & Rejunte</h4>
+                            
+                            <div class="mt-4 space-y-4">
+                                <div class="flex items-start gap-2">
+                                    <i data-lucide="package" class="w-4 h-4 text-indigo-400 mt-1 flex-shrink-0"></i>
+                                    <div>
+                                        <p class="text-xs text-slate-400">Argamassa Estimada (AC-I / AC-II)</p>
+                                        <p class="text-white text-sm font-semibold">${consumoArgamassa.toFixed(0)} kg <span class="font-normal text-slate-400"> (~${Math.ceil(consumoArgamassa/20)} sacos de 20kg)</span></p>
+                                    </div>
+                                </div>
+                                <div class="flex items-start gap-2">
+                                    <i data-lucide="droplet" class="w-4 h-4 text-teal-400 mt-1 flex-shrink-0"></i>
+                                    <div>
+                                        <p class="text-xs text-slate-400">Rejunte Cerâmico Estimado</p>
+                                        <p class="text-white text-sm font-semibold">${consumoRejunte.toFixed(1)} kg <span class="font-normal text-slate-400"> (~${Math.ceil(consumoRejunte/5)} pacotes de 5kg)</span></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Rodapé informativo sobre Norma -->
+                    <div class="p-4 bg-blue-950/40 rounded-xl border border-blue-900/50 text-xs text-slate-300 space-y-2">
+                        <p class="font-bold text-blue-300 flex items-center gap-1.5">
+                            <i data-lucide="check-circle" class="w-4 h-4"></i> Diretrizes Técnicas (NBR 13753):
+                        </p>
+                        <ul class="list-disc list-inside space-y-1 pl-1">
+                            <li>O contrapiso deve estar limpo, curado (mínimo 28 dias) e perfeitamente nivelado.</li>
+                            <li>Para peças com área superior a 900 cm² (ex: placas maiores que 30x30 cm), a norma recomenda dupla colagem (argamassa no piso e no tardoz da placa) para evitar bolhas e quebras.</li>
+                            <li>Juntas de movimentação devem ser rigorosamente respeitadas conforme as dimensões indicadas pelo fabricante.</li>
+                        </ul>
+                    </div>
+                `;
+
+            } else {
+                // Cálculo de Telhado
+                const areaPlana = parseFloat(document.getElementById('telha-area').value);
+                const inclinacaoPercent = parseFloat(document.getElementById('telha-inclinacao').value);
+                const telhaComp = parseFloat(document.getElementById('telha-comp').value);
+                const telhaLarg = parseFloat(document.getElementById('telha-larg').value);
+
+                if (isNaN(areaPlana) || areaPlana <= 0) {
+                    showError("Por favor, insira uma área plana válida.");
+                    return;
+                }
+                if (isNaN(inclinacaoPercent) || inclinacaoPercent <= 0) {
+                    showError("Por favor, insira uma inclinação válida (ex: 30%).");
+                    return;
+                }
+                if (isNaN(telhaComp) || telhaComp <= 0 || isNaN(telhaLarg) || telhaLarg <= 0) {
+                    showError("Por favor, insira as dimensões úteis das telhas.");
+                    return;
+                }
+
+                // Cálculo geométrico real considerando a inclinação
+                // Inclinação em percentual: I = H/B * 100. Logo, tangente(ângulo) = I / 100
+                const tgAngulo = inclinacaoPercent / 100;
+                // Fator de Correção (hipotenusa de base 1 e altura tgAngulo)
+                const fatorCorrecao = Math.sqrt(1 + Math.pow(tgAngulo, 2));
+                const areaInclinada = areaPlana * fatorCorrecao;
+
+                // Telhas
+                const areaUtilTelha = telhaComp * telhaLarg;
+                const telhasTeoricas = Math.ceil(areaInclinada / areaUtilTelha);
+                // 10% padrão de perdas para cobertura (NBR 8039)
+                const perdaTelha = 0.10;
+                const telhasComPerda = Math.ceil(telhasTeoricas * (1 + perdaTelha));
+
+                // ESTRUTURA DE MADEIRAMENTO SUGERIDA
+                // 1. Ripas: vão paralelas aos beirais. O espaçamento é o comprimento útil da telha (telhaComp)
+                // Comprimento linear total de ripas: (Área Inclinada / espaçamento entre ripas)
+                const linearRipas = (areaInclinada / telhaComp) * 1.05; // 5% perda
+
+                // 2. Caibros: perpendiculares às ripas. Espaçamento padrão de 0,5m a 0,6m de eixo a eixo
+                const espCaibros = 0.50; 
+                // Estimativa linear simplificada: (Área Inclinada / espaçamento)
+                const linearCaibros = (areaInclinada / espCaibros) * 1.05;
+
+                // 3. Vigas/Terças: vão paralelas ao beiral a cada 1.8m aproximadamente
+                const espVigas = 1.8;
+                const linearVigas = (areaInclinada / espVigas) * 1.05;
+
+                resultadoConteudo.innerHTML = `
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Bloco Telhas -->
+                        <div class="bg-slate-800/80 p-5 rounded-xl border border-slate-700/60">
+                            <span class="text-blue-400 text-xs font-semibold">CONSUMO DE TELHAS (NBR 15310)</span>
+                            <h4 class="text-2xl font-bold mt-1 text-white">${telhasComPerda} Unidades</h4>
+                            <p class="text-slate-400 text-xs mt-1">Margem de perda inclusa: <strong>10%</strong></p>
+                            
+                            <div class="mt-4 border-t border-slate-700/50 pt-4 space-y-2.5 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-slate-400">Área Geométrica Real:</span>
+                                    <span class="text-white font-medium">${areaInclinada.toFixed(2)} m² <span class="text-[11px] text-slate-400">(fator de correção: ${fatorCorrecao.toFixed(3)})</span></span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-slate-400">Quantidade Teórica:</span>
+                                    <span class="text-white font-medium">${telhasTeoricas} un.</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-slate-400">Rendimento útil médio:</span>
+                                    <span class="text-white font-medium">${(1 / areaUtilTelha).toFixed(1)} telhas/m²</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-slate-400">Área útil de 1 telha:</span>
+                                    <span class="text-white font-medium">${areaUtilTelha.toFixed(3)} m²</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Bloco Estrutura de Madeira -->
+                        <div class="bg-slate-800/80 p-5 rounded-xl border border-slate-700/60">
+                            <span class="text-indigo-400 text-xs font-semibold">MADEIRAMENTO SUGERIDO (MÉDIO)</span>
+                            <h4 class="text-lg font-bold mt-1 text-white">Vigas, Caibros e Ripas</h4>
+                            <p class="text-slate-400 text-[11px] mt-1">Cálculo estimativo para telhas do tipo cerâmico</p>
+                            
+                            <div class="mt-4 space-y-4">
+                                <div class="flex items-start gap-2.5">
+                                    <div class="w-6 h-6 rounded bg-indigo-900/50 flex items-center justify-center text-xs text-indigo-300 font-bold flex-shrink-0">R</div>
+                                    <div>
+                                        <p class="text-xs text-slate-400">Ripas (Seção recomendada: 5x1.5 cm)</p>
+                                        <p class="text-white text-sm font-semibold">${linearRipas.toFixed(0)} metros lineares <span class="font-normal text-slate-400">(galga útil: ${(telhaComp*100).toFixed(0)} cm)</span></p>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-start gap-2.5">
+                                    <div class="w-6 h-6 rounded bg-indigo-900/50 flex items-center justify-center text-xs text-indigo-300 font-bold flex-shrink-0">C</div>
+                                    <div>
+                                        <p class="text-xs text-slate-400">Caibros (Seção recomendada: 5x6 cm)</p>
+                                        <p class="text-white text-sm font-semibold">${linearCaibros.toFixed(0)} metros lineares <span class="font-normal text-slate-400">(espaçamento: ${(espCaibros*100).toFixed(0)} cm)</span></p>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-start gap-2.5">
+                                    <div class="w-6 h-6 rounded bg-indigo-900/50 flex items-center justify-center text-xs text-indigo-300 font-bold flex-shrink-0">V</div>
+                                    <div>
+                                        <p class="text-xs text-slate-400">Vigas / Terças (Seção recomendada: 6x12 cm ou superior)</p>
+                                        <p class="text-white text-sm font-semibold">${linearVigas.toFixed(0)} metros lineares <span class="font-normal text-slate-400">(espaçamento: ~1.8 m)</span></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Informações Importantes de Engenharia -->
+                    <div class="p-4 bg-amber-950/40 rounded-xl border border-amber-900/50 text-xs text-slate-300 space-y-2">
+                        <p class="font-bold text-amber-300 flex items-center gap-1.5">
+                            <i data-lucide="info" class="w-4 h-4"></i> Atenção Técnica (NBR 8039):
+                        </p>
+                        <ul class="list-disc list-inside space-y-1 pl-1">
+                            <li><strong>Caimento mínimo:</strong> Para telhas cerâmicas comuns, a inclinação de projeto não deve ser inferior a 30% para evitar retorno de água pelo vento.</li>
+                            <li><strong>Fixação:</strong> Telhados expostos a ventos fortes devem ter as telhas periféricas (beirais e cumeeiras) firmemente amarradas/fixadas com arame de cobre ou parafusos.</li>
+                            <li>As madeiras devem receber tratamento químico adequado de preservação contra pragas (cupins e fungos) antes do assentamento das telhas.</li>
+                        </ul>
+                    </div>
+                `;
+            }
+
+            // Ativar a exibição dos resultados e rolar até eles
+            resultadoDiv.classList.remove('hidden');
+            lucide.createIcons();
+            
+            setTimeout(() => {
+                resultadoDiv.scrollIntoView({ behavior: 'smooth' });
+            }, 100);
+        }
+    </script>
+</body>
+</html>
+
+```
