@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+<title>Mini Boliche</title>
+<style>
+*{box-sizing:border-box;touch-action:none}
+body{
+margin:0;background:#222;font-family:Arial,sans-serif;
+display:flex;justify-content:center;align-items:center;height:100vh;
+}
+#game{
+position:relative;width:100vw;height:100vh;max-width:600px;max-height:900px;
+overflow:hidden;
+background:linear-gradient(#c79a5b,#9a6a32);
+border:8px solid #5b3a1c;
+}
+#ui{
+position:absolute;top:10px;width:100%;text-align:center;color:#fff;
+font-weight:bold;text-shadow:2px 2px 3px #000;z-index:100;
+}
+#lane{
+position:absolute;left:10%;top:70px;width:80%;height:75%;
+background:linear-gradient(90deg,#d8b27a,#c99b5d,#d8b27a);
+border:4px solid #7a5228;
+}
+.pin{
+position:absolute;width:22px;height:40px;background:white;
+border-radius:12px 12px 8px 8px;
+border-top:6px solid red;
+transition:.4s;
+}
+.fallen{
+transform:rotate(90deg);
+opacity:.5;
+}
+#ball{
+position:absolute;
+width:36px;height:36px;border-radius:50%;
+background:radial-gradient(circle at 30% 30%,#444,#111);
+bottom:80px;left:50%;
+transform:translateX(-50%);
+}
+#arrow{
+position:absolute;
+width:4px;height:100px;
+background:orange;
+bottom:95px;left:50%;
+transform-origin:bottom center;
+display:none;
+}
+#arrow:after{
+content:'';
+position:absolute;
+top:-12px;left:-8px;
+border-left:10px solid transparent;
+border-right:10px solid transparent;
+border-bottom:15px solid red;
+}
+#powerContainer{
+position:absolute;
+bottom:20px;left:50%;
+transform:translateX(-50%);
+width:220px;height:20px;
+border:2px solid white;
+display:none;
+}
+#powerBar{
+height:100%;width:0%;
+background:linear-gradient(90deg,green,yellow,red);
+}
+#msg{
+position:absolute;
+top:45%;
+width:100%;
+text-align:center;
+font-size:40px;
+font-weight:bold;
+color:white;
+text-shadow:3px 3px 4px black;
+pointer-events:none;
+}
+</style>
+</head>
+<body>
+<div id="game">
+<div id="ui">
+Frame: <span id="frame">1</span> |
+Jogada: <span id="roll">1</span>/2 |
+Derrubados: <span id="down">0</span> |
+Total: <span id="score">0</span>
+</div>
+
+<div id="lane"></div>
+<div id="msg"></div>
+<div id="arrow"></div>
+<div id="ball"></div>
+
+<div id="powerContainer">
+<div id="powerBar"></div>
+</div>
+</div>
+
+<script>
+const lane=document.getElementById("lane");
+const ball=document.getElementById("ball");
+const arrow=document.getElementById("arrow");
+const powerBar=document.getElementById("powerBar");
+const powerContainer=document.getElementById("powerContainer");
+const frameEl=document.getElementById("frame");
+const rollEl=document.getElementById("roll");
+const downEl=document.getElementById("down");
+const scoreEl=document.getElementById("score");
+const msg=document.getElementById("msg");
+
+let pins=[];
+let angle=0;
+let angleDir=1;
+let power=1;
+let powerDir=1;
+let charging=false;
+let moving=false;
+
+let frame=1;
+let roll=1;
+let totalScore=0;
+let frameDown=0;
+
+function createPins(){
+lane.querySelectorAll(".pin").forEach(p=>p.remove());
+pins=[];
+
+const rows=[1,2,3,4];
+let startY=50;
+
+rows.forEach((count,row)=>{
+for(let i=0;i<count;i++){
+let pin=document.createElement("div");
+pin.className="pin";
+
+let spacing=35;
+let rowWidth=(count-1)*spacing;
+
+pin.style.left=(lane.clientWidth/2-rowWidth/2+i*spacing)+"px";
+pin.style.top=(startY+row*45)+"px";
+
+lane.appendChild(pin);
+pins.push(pin);
+}
+});
+}
+
+createPins();
+
+function aimLoop(){
+if(charging){
+angle+=1.5*angleDir;
+if(Math.abs(angle)>35) angleDir*=-1;
+
+power+=0.15*powerDir;
+if(power>10||power<1) powerDir*=-1;
+
+arrow.style.transform="translateX(-50%) rotate("+angle+"deg)";
+powerBar.style.width=(power*10)+"%";
+}
+requestAnimationFrame(aimLoop);
+}
+aimLoop();
+
+document.getElementById("game").addEventListener("mousedown",startCharge);
+document.getElementById("game").addEventListener("touchstart",(e)=>{
+e.preventDefault();
+startCharge();
+});
+
+window.addEventListener("mouseup",releaseCharge);
+window.addEventListener("touchend",releaseCharge);
+
+function startCharge(){
+if(moving)return;
+charging=true;
+arrow.style.display="block";
+powerContainer.style.display="block";
+}
+
+function releaseCharge(){
+if(!charging)return;
+
+charging=false;
+moving=true;
+
+arrow.style.display="none";
+powerContainer.style.display="none";
+
+shoot(angle,power);
+}
+
+function shoot(a,p){
+let x=50;
+let y=80;
+
+let speed=p*1.3;
+
+let rad=(a-90)*Math.PI/180;
+
+let vx=Math.cos(rad)*speed;
+let vy=Math.sin(rad)*speed;
+
+const interval=setInterval(()=>{
+
+x+=vx*0.35;
+y-=vy*2.5;
+
+ball.style.left=x+"%";
+ball.style.bottom=y+"px";
+
+vx*=0.992;
+vy*=0.992;
+
+checkPins();
+
+if(y>lane.clientHeight+250 || (Math.abs(vx)<0.05&&Math.abs(vy)<0.05)){
+clearInterval(interval);
+endRoll();
+}
+
+},16);
+}
+
+function checkPins(){
+
+let b=ball.getBoundingClientRect();
+
+pins.forEach(pin=>{
+
+if(pin.classList.contains("fallen")) return;
+
+let p=pin.getBoundingClientRect();
+
+let dx=(b.left+b.width/2)-(p.left+p.width/2);
+let dy=(b.top+b.height/2)-(p.top+p.height/2);
+
+let dist=Math.sqrt(dx*dx+dy*dy);
+
+if(dist<28){
+pin.classList.add("fallen");
+frameDown++;
+totalScore++;
+
+downEl.textContent=frameDown;
+scoreEl.textContent=totalScore;
+}
+});
+}
+
+function endRoll(){
+
+moving=false;
+
+ball.style.left="50%";
+ball.style.bottom="80px";
+
+let fallen=pins.filter(p=>p.classList.contains("fallen")).length;
+
+if(fallen===10 && roll===1){
+showMessage("STRIKE!");
+nextFrame();
+return;
+}
+
+if(fallen===10 && roll===2){
+showMessage("SPARE!");
+nextFrame();
+return;
+}
+
+if(roll===1){
+roll=2;
+rollEl.textContent=2;
+}
+else{
+nextFrame();
+}
+}
+
+function nextFrame(){
+setTimeout(()=>{
+
+frame++;
+frameDown=0;
+roll=1;
+
+frameEl.textContent=frame;
+rollEl.textContent=1;
+downEl.textContent=0;
+
+createPins();
+
+},1200);
+}
+
+function showMessage(text){
+msg.textContent=text;
+
+setTimeout(()=>{
+msg.textContent="";
+},1200);
+}
+</script>
+</body>
+</html>
