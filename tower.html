@@ -1,0 +1,1122 @@
+```html
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>S-Path Tower Defense</title>
+  <!-- Tailwind CSS para estilização rápida e moderna -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts para tipografia gamer estilosa -->
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+  <!-- FontAwesome para ícones bacanas -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <style>
+    body {
+      font-family: 'Rajdhani', sans-serif;
+      background-color: #0b0f19;
+    }
+    .orbitron-font {
+      font-family: 'Orbitron', sans-serif;
+    }
+    /* Estilos para prevenir scroll indesejado e seleção de texto ao arrastar em mobile */
+    canvas {
+      touch-action: none;
+      user-select: none;
+    }
+    .drag-ghost {
+      pointer-events: none;
+      position: absolute;
+      transform: translate(-50%, -50%);
+      z-index: 50;
+      transition: transform 0.05s linear;
+    }
+  </style>
+</head>
+<body class="text-gray-100 min-h-screen flex flex-col justify-between overflow-x-hidden selection:bg-indigo-500 selection:text-white">
+
+  <!-- Cabeçalho Principal -->
+  <header class="bg-slate-900 border-b border-slate-800 py-3 px-4 shadow-lg">
+    <div class="max-w-6xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center text-white shadow-indigo-500/20 shadow-md">
+          <i class="fa-solid fa-shield-halved text-xl animate-pulse"></i>
+        </div>
+        <div>
+          <h1 class="text-2xl font-black tracking-wider text-white orbitron-font">S-PATH <span class="text-indigo-400">DEFENDER</span></h1>
+          <p class="text-xs text-slate-400">Proteja a saída para salvar suas moedas!</p>
+        </div>
+      </div>
+      
+      <!-- Indicadores Rápidos -->
+      <div class="flex items-center gap-4">
+        <div class="bg-slate-950 px-4 py-1.5 rounded-lg border border-slate-800 flex items-center gap-2">
+          <i class="fa-solid fa-coins text-amber-400 text-lg"></i>
+          <span class="text-xs font-semibold text-slate-400 uppercase">Dinheiro:</span>
+          <span id="header-coins" class="text-xl font-bold text-amber-400 orbitron-font">1000</span>
+        </div>
+        <div class="bg-slate-950 px-4 py-1.5 rounded-lg border border-slate-800 flex items-center gap-2">
+          <i class="fa-solid fa-wave-square text-indigo-400 text-lg"></i>
+          <span class="text-xs font-semibold text-slate-400 uppercase">Horda:</span>
+          <span id="header-wave" class="text-xl font-bold text-indigo-400 orbitron-font">1</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Container de Alertas Flutuantes -->
+  <div id="alert-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm pointer-events-none"></div>
+
+  <!-- Arena de Jogo e Painel Lateral -->
+  <main class="max-w-6xl w-full mx-auto px-4 my-6 flex-grow flex flex-col lg:flex-row gap-6">
+    
+    <!-- Lado Esquerdo: Área do Jogo (Canvas) -->
+    <div class="flex-grow flex flex-col gap-4">
+      <!-- Barra de Controle do Jogo -->
+      <div class="bg-slate-900/80 backdrop-blur border border-slate-800 p-3 rounded-2xl flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-2">
+          <button id="btn-start-wave" class="bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold py-2 px-6 rounded-xl transition duration-150 shadow-md shadow-emerald-600/20 flex items-center gap-2 text-sm uppercase tracking-wider">
+            <i class="fa-solid fa-play"></i> Enviar Horda
+          </button>
+          <button id="btn-speed" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2 px-4 rounded-xl transition duration-150 flex items-center gap-2 text-sm">
+            <i class="fa-solid fa-forward"></i> <span id="speed-label">1x Velocidade</span>
+          </button>
+        </div>
+        <div class="text-sm text-slate-400 flex items-center gap-3">
+          <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span> Entrada</span>
+          <i class="fa-solid fa-angles-right text-slate-600"></i>
+          <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-rose-500 inline-block"></span> Saída</span>
+        </div>
+      </div>
+
+      <!-- Canvas Wrapper -->
+      <div class="relative bg-slate-950 rounded-2xl border border-slate-800 overflow-hidden shadow-inner flex justify-center items-center">
+        <!-- O Canvas usa uma resolução padrão fixa interna, mas é responsivo no layout -->
+        <canvas id="gameCanvas" width="800" height="500" class="w-full h-auto aspect-[8/5] bg-slate-950 cursor-crosshair"></canvas>
+        
+        <!-- Elemento flutuante para efeito de arrastar (Drag Ghost) -->
+        <div id="drag-ghost" class="drag-ghost hidden pointer-events-none">
+          <div class="w-12 h-12 rounded-full opacity-70 flex items-center justify-center border-2 border-dashed"></div>
+          <div class="w-24 h-24 rounded-full bg-white/10 border border-white/30 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full pointer-events-none"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lado Direito: Loja, Instruções e Estatísticas -->
+    <div class="w-full lg:w-80 flex flex-col gap-6">
+      <!-- Painel de Compra de Torres (Drag Source) -->
+      <div class="bg-slate-900/80 backdrop-blur border border-slate-800 p-5 rounded-2xl shadow-lg flex flex-col gap-4">
+        <h2 class="text-lg font-bold tracking-wider text-slate-200 border-b border-slate-800 pb-2 orbitron-font">
+          <i class="fa-solid fa-store mr-2 text-indigo-400"></i>LOJA DE TORRES
+        </h2>
+        <p class="text-xs text-slate-400 mb-2">Arraste a torre desejada para o mapa ou clique nela e depois clique no mapa para posicionar.</p>
+
+        <!-- Grade de Torres para Compra -->
+        <div class="flex flex-col gap-3">
+          <!-- Torre 1 -->
+          <div id="shop-tower-1" draggable="true" data-tower-type="1" class="shop-item group bg-slate-950 hover:bg-slate-800/60 border border-slate-800 hover:border-emerald-500/50 p-3 rounded-xl cursor-grab active:cursor-grabbing transition duration-150 flex items-center gap-4 relative overflow-hidden select-none">
+            <div class="w-12 h-12 bg-emerald-500/10 border border-emerald-500/30 rounded-lg flex items-center justify-center text-emerald-400 group-hover:scale-105 transition-transform">
+              <i class="fa-solid fa-tower-broadcast text-2xl"></i>
+            </div>
+            <div class="flex-grow">
+              <div class="flex justify-between items-center">
+                <span class="font-bold text-slate-200 text-sm">Torre Básica</span>
+                <span class="text-amber-400 font-bold text-sm orbitron-font">$100</span>
+              </div>
+              <div class="flex gap-3 text-xs text-slate-400 mt-1">
+                <span>Dano: <strong class="text-emerald-400">10</strong></span>
+                <span>Alcance: <strong class="text-slate-300">120</strong></span>
+              </div>
+            </div>
+            <div class="absolute right-1 bottom-1 opacity-10 group-hover:opacity-20 transition-opacity">
+              <i class="fa-solid fa-tower-broadcast text-4xl"></i>
+            </div>
+          </div>
+
+          <!-- Torre 2 -->
+          <div id="shop-tower-2" draggable="true" data-tower-type="2" class="shop-item group bg-slate-950 hover:bg-slate-800/60 border border-slate-800 hover:border-blue-500/50 p-3 rounded-xl cursor-grab active:cursor-grabbing transition duration-150 flex items-center gap-4 relative overflow-hidden select-none">
+            <div class="w-12 h-12 bg-blue-500/10 border border-blue-500/30 rounded-lg flex items-center justify-center text-blue-400 group-hover:scale-105 transition-transform">
+              <i class="fa-solid fa-bolt text-2xl"></i>
+            </div>
+            <div class="flex-grow">
+              <div class="flex justify-between items-center">
+                <span class="font-bold text-slate-200 text-sm">Torre Média</span>
+                <span class="text-amber-400 font-bold text-sm orbitron-font">$150</span>
+              </div>
+              <div class="flex gap-3 text-xs text-slate-400 mt-1">
+                <span>Dano: <strong class="text-blue-400">15</strong></span>
+                <span>Alcance: <strong class="text-slate-300">150</strong></span>
+              </div>
+            </div>
+            <div class="absolute right-1 bottom-1 opacity-10 group-hover:opacity-20 transition-opacity">
+              <i class="fa-solid fa-bolt text-4xl"></i>
+            </div>
+          </div>
+
+          <!-- Torre 3 -->
+          <div id="shop-tower-3" draggable="true" data-tower-type="3" class="shop-item group bg-slate-950 hover:bg-slate-800/60 border border-slate-800 hover:border-rose-500/50 p-3 rounded-xl cursor-grab active:cursor-grabbing transition duration-150 flex items-center gap-4 relative overflow-hidden select-none">
+            <div class="w-12 h-12 bg-rose-500/10 border border-rose-500/30 rounded-lg flex items-center justify-center text-rose-400 group-hover:scale-105 transition-transform">
+              <i class="fa-solid fa-meteor text-2xl"></i>
+            </div>
+            <div class="flex-grow">
+              <div class="flex justify-between items-center">
+                <span class="font-bold text-slate-200 text-sm">Torre Forte</span>
+                <span class="text-amber-400 font-bold text-sm orbitron-font">$200</span>
+              </div>
+              <div class="flex gap-3 text-xs text-slate-400 mt-1">
+                <span>Dano: <strong class="text-rose-400">20</strong></span>
+                <span>Alcance: <strong class="text-slate-300">180</strong></span>
+              </div>
+            </div>
+            <div class="absolute right-1 bottom-1 opacity-10 group-hover:opacity-20 transition-opacity">
+              <i class="fa-solid fa-meteor text-4xl"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Guia / Informações do Jogo -->
+      <div class="bg-slate-900/80 backdrop-blur border border-slate-800 p-5 rounded-2xl shadow-lg flex flex-col gap-3">
+        <h3 class="text-md font-bold text-slate-200 orbitron-font border-b border-slate-800 pb-1.5 flex items-center gap-2">
+          <i class="fa-solid fa-circle-info text-indigo-400"></i> REGRAS DO COMBATE
+        </h3>
+        <ul class="text-xs text-slate-300 space-y-2.5">
+          <li class="flex gap-2">
+            <i class="fa-solid fa-skull text-rose-400 mt-0.5"></i>
+            <span>Destruir um inimigo (quadrado/carro) concede <strong class="text-amber-400">+25 moedas</strong>.</span>
+          </li>
+          <li class="flex gap-2">
+            <i class="fa-solid fa-triangle-exclamation text-amber-500 mt-0.5"></i>
+            <span>Cada inimigo sobrevivente que escapar pela saída retira <strong class="text-rose-400">-100 moedas</strong>.</span>
+          </li>
+          <li class="flex gap-2">
+            <i class="fa-solid fa-heart-crack text-rose-500 mt-0.5"></i>
+            <span>Se as suas moedas ficarem <strong class="text-rose-400">menores que 0</strong>, a defesa falha e é Fim de Jogo!</span>
+          </li>
+          <li class="flex gap-2">
+            <i class="fa-solid fa-chart-line text-cyan-400 mt-0.5"></i>
+            <span>A cada nova rodada, um inimigo a mais entra na pista (Rodada 1: 1 inimigo, Rodada 2: 2 inimigos, etc.). Todos com <strong class="text-emerald-400">30 HP</strong>.</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </main>
+
+  <!-- Rodapé -->
+  <footer class="bg-slate-950 border-t border-slate-900 py-3 text-center text-xs text-slate-500">
+    <div class="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-2">
+      <p>&copy; 2026 S-Path Defender. Desenvolvido com Gemini em Canvas.</p>
+      <p class="flex items-center gap-1"><i class="fa-solid fa-mobile-screen"></i> Design totalmente otimizado para celulares e computadores.</p>
+    </div>
+  </footer>
+
+  <!-- Modal do Jogo (Iniciar / Fim de Jogo) -->
+  <div id="game-modal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 max-w-md w-full rounded-2xl p-6 shadow-2xl relative overflow-hidden">
+      <!-- Fundo decorativo -->
+      <div class="absolute -top-10 -right-10 w-32 h-32 bg-indigo-600/10 rounded-full blur-2xl"></div>
+      
+      <div class="text-center flex flex-col items-center gap-4 relative z-10">
+        <div id="modal-icon" class="w-16 h-16 bg-indigo-500/10 text-indigo-400 rounded-full flex items-center justify-center text-3xl mb-1 shadow-lg border border-indigo-500/20">
+          <i class="fa-solid fa-gamepad"></i>
+        </div>
+        
+        <h2 id="modal-title" class="text-2xl font-black tracking-wider text-white orbitron-font uppercase">S-Path Defender</h2>
+        <p id="modal-body" class="text-sm text-slate-300 leading-relaxed">
+          Você começa com 1000 moedas para erguer suas torres ao longo da pista S. Planeje suas defesas com maestria: perder moedas significa aproximar-se da derrota!
+        </p>
+        
+        <!-- Score Final (Oculto inicialmente) -->
+        <div id="modal-scores" class="hidden w-full bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-col gap-2 my-2">
+          <div class="flex justify-between text-xs text-slate-400 uppercase font-semibold">
+            <span>Hordas Sobrevividas</span>
+            <span id="score-waves" class="text-indigo-400 font-bold text-sm orbitron-font">0</span>
+          </div>
+          <div class="flex justify-between text-xs text-slate-400 uppercase font-semibold">
+            <span>Inimigos Abatidos</span>
+            <span id="score-kills" class="text-emerald-400 font-bold text-sm orbitron-font">0</span>
+          </div>
+          <div class="flex justify-between text-xs text-slate-400 uppercase font-semibold">
+            <span>Moedas Máximas Conquistadas</span>
+            <span id="score-max-gold" class="text-amber-400 font-bold text-sm orbitron-font">0</span>
+          </div>
+        </div>
+
+        <button id="modal-btn" class="w-full bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-bold py-3 px-6 rounded-xl transition duration-150 shadow-md shadow-indigo-600/20 uppercase tracking-widest text-sm orbitron-font">
+          Iniciar Jogo
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Script do Motor do Jogo -->
+  <script>
+    // Inicialização do Jogo e Elementos da DOM
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const headerCoins = document.getElementById('header-coins');
+    const headerWave = document.getElementById('header-wave');
+    const btnStartWave = document.getElementById('btn-start-wave');
+    const btnSpeed = document.getElementById('btn-speed');
+    const speedLabel = document.getElementById('speed-label');
+    const alertContainer = document.getElementById('alert-container');
+    
+    // Modal
+    const gameModal = document.getElementById('game-modal');
+    const modalIcon = document.getElementById('modal-icon');
+    const modalTitle = document.getElementById('modal-title');
+    const modalBody = document.getElementById('modal-body');
+    const modalScores = document.getElementById('modal-scores');
+    const modalBtn = document.getElementById('modal-btn');
+    const scoreWaves = document.getElementById('score-waves');
+    const scoreKills = document.getElementById('score-kills');
+    const scoreMaxGold = document.getElementById('score-max-gold');
+
+    // Drag-Ghost Element
+    const dragGhost = document.getElementById('drag-ghost');
+
+    // Estado Geral do Jogo
+    let gameActive = false;
+    let coins = 1000;
+    let wave = 1;
+    let waveInProgress = false;
+    let gameSpeed = 1; // Multiplicador de velocidade (1x ou 2x)
+    let totalKills = 0;
+    let peakCoins = 1000;
+
+    // Entidades do Jogo
+    let towers = [];
+    let enemies = [];
+    let projectiles = [];
+    let particles = []; // Efeitos visuais de explosões
+
+    // Lista de Configurações das Torres
+    const TOWER_TYPES = {
+      1: {
+        id: 1,
+        name: 'Torre Básica',
+        cost: 100,
+        damage: 10,
+        range: 120,
+        fireRate: 800, // milisegundos
+        color: '#10b981', // Verde Esmeralda
+        bulletColor: '#34d399',
+        icon: 'fa-tower-broadcast',
+        size: 18
+      },
+      2: {
+        id: 2,
+        name: 'Torre Média',
+        cost: 150,
+        damage: 15,
+        range: 150,
+        fireRate: 650, // Mais rápida
+        color: '#3b82f6', // Azul Sky
+        bulletColor: '#60a5fa',
+        icon: 'fa-bolt',
+        size: 18
+      },
+      3: {
+        id: 3,
+        name: 'Torre Forte',
+        cost: 200,
+        damage: 20,
+        range: 180,
+        fireRate: 1100, // Devagar, porém forte
+        color: '#f43f5e', // Rosa-vermelho
+        bulletColor: '#fb7185',
+        icon: 'fa-meteor',
+        size: 20
+      }
+    };
+
+    // Definição da Pista Curvada em S (Resoluções de escala padrão: 800x500)
+    // Usaremos pontos de controle para desenhar a curva bezier ou retas suaves
+    const pathPoints = [
+      { x: -30, y: 80 },    // Início fora da tela esquerda
+      { x: 200, y: 80 },    // Seguindo reto superior direito
+      { x: 620, y: 80 },    // Curva superior direita
+      { x: 620, y: 250 },   // Descendo vertical direita
+      { x: 400, y: 250 },   // Cruzando o meio para esquerda
+      { x: 180, y: 250 },   // Extremidade esquerda média
+      { x: 180, y: 420 },   // Descendo vertical esquerda
+      { x: 830, y: 420 }    // Saída reta inferior direita
+    ];
+
+    // Função de interpolação linear para guiar os carros/quadrados pela pista
+    function getPathPosition(t) {
+      if (t <= 0) return { x: pathPoints[0].x, y: pathPoints[0].y };
+      if (t >= 1) return { x: pathPoints[pathPoints.length - 1].x, y: pathPoints[pathPoints.length - 1].y };
+
+      const numSegments = pathPoints.length - 1;
+      const scaledT = t * numSegments;
+      const index = Math.floor(scaledT);
+      const localT = scaledT - index;
+
+      const p0 = pathPoints[index];
+      const p1 = pathPoints[index + 1];
+
+      return {
+        x: p0.x + (p1.x - p0.x) * localT,
+        y: p0.y + (p1.y - p0.y) * localT
+      };
+    }
+
+    // Gerador de Alertas Estilizados (Substituindo Alert())
+    function showAlert(message, type = 'info') {
+      const toast = document.createElement('div');
+      toast.className = `p-3.5 rounded-xl shadow-lg border text-sm font-semibold transition-all duration-300 transform translate-y-2 opacity-0 flex items-center gap-2 max-w-[280px] pointer-events-auto`;
+      
+      let icon = 'fa-circle-info text-blue-400';
+      if (type === 'success') {
+        toast.classList.add('bg-slate-900', 'border-emerald-800', 'text-emerald-400');
+        icon = 'fa-circle-check text-emerald-400';
+      } else if (type === 'error') {
+        toast.classList.add('bg-slate-900', 'border-rose-900', 'text-rose-400');
+        icon = 'fa-circle-exclamation text-rose-400';
+      } else {
+        toast.classList.add('bg-slate-900', 'border-slate-800', 'text-indigo-400');
+        icon = 'fa-circle-info text-indigo-400';
+      }
+
+      toast.innerHTML = `<i class="fa-solid ${icon}"></i> <span>${message}</span>`;
+      alertContainer.appendChild(toast);
+
+      // Trigger animations
+      setTimeout(() => {
+        toast.classList.remove('opacity-0', 'translate-y-2');
+      }, 50);
+
+      // Auto destroy
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y--2');
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    // Inicialização da GUI
+    function updateUI() {
+      headerCoins.innerText = coins;
+      headerWave.innerText = wave;
+      
+      // Destacar as moedas caso fiquem perigosamente baixas
+      if (coins < 200) {
+        headerCoins.classList.add('animate-pulse', 'text-rose-500');
+        headerCoins.classList.remove('text-amber-400');
+      } else {
+        headerCoins.classList.remove('animate-pulse', 'text-rose-500');
+        headerCoins.classList.add('text-amber-400');
+      }
+
+      // Controlar habilitar/desabilitar de itens da loja por dinheiro
+      for (let key in TOWER_TYPES) {
+        const item = document.querySelector(`[data-tower-type="${key}"]`);
+        if (item) {
+          if (coins < TOWER_TYPES[key].cost) {
+            item.classList.add('opacity-40', 'cursor-not-allowed');
+            item.classList.remove('cursor-grab', 'hover:border-indigo-500/50');
+          } else {
+            item.classList.remove('opacity-40', 'cursor-not-allowed');
+            item.classList.add('cursor-grab');
+          }
+        }
+      }
+
+      // Habilitar ou desabilitar o botão de iniciar horda
+      if (waveInProgress) {
+        btnStartWave.classList.add('opacity-50', 'cursor-not-allowed');
+        btnStartWave.disabled = true;
+      } else {
+        btnStartWave.classList.remove('opacity-50', 'cursor-not-allowed');
+        btnStartWave.disabled = false;
+      }
+    }
+
+    // Controlar velocidade do jogo
+    btnSpeed.addEventListener('click', () => {
+      if (gameSpeed === 1) {
+        gameSpeed = 2;
+        speedLabel.innerText = "2x Velocidade";
+        btnSpeed.classList.replace('bg-slate-800', 'bg-indigo-900/40');
+        btnSpeed.classList.replace('text-slate-300', 'text-indigo-300');
+      } else {
+        gameSpeed = 1;
+        speedLabel.innerText = "1x Velocidade";
+        btnSpeed.classList.replace('bg-indigo-900/40', 'bg-slate-800');
+        btnSpeed.classList.replace('text-indigo-300', 'text-slate-300');
+      }
+    });
+
+    // Iniciar uma nova horda
+    btnStartWave.addEventListener('click', () => {
+      if (waveInProgress) return;
+      startWave();
+    });
+
+    // Sistema de Waves Progressivas
+    function startWave() {
+      waveInProgress = true;
+      updateUI();
+      
+      // Quantidade de inimigos na horda é igual ao número da horda (ex: Wave 1 = 1, Wave 2 = 2)
+      let enemiesToSpawn = wave;
+      let spawnInterval = 1200; // Intervalo de spawn de inimigos em ms
+      let spawnCounter = 0;
+
+      const spawnTimer = setInterval(() => {
+        if (!gameActive) {
+          clearInterval(spawnTimer);
+          return;
+        }
+
+        // Criar um novo carro/inimigo (quadrado)
+        enemies.push({
+          id: Math.random().toString(36).substring(2, 9),
+          t: -0.05 * spawnCounter, // Deslocamento para eles virem em fila indiana antes de entrar no canvas
+          speed: 0.0018 + (Math.random() * 0.0004), // Velocidade suave da trilha (t vai de 0 a 1)
+          hp: 30,
+          maxHp: 30,
+          size: 24, // Tamanho do quadrado (carro)
+          color: '#cbd5e1', // Slate inicial
+          flashTime: 0 // Usado para piscar em vermelho ao receber dano
+        });
+
+        spawnCounter++;
+        if (spawnCounter >= enemiesToSpawn) {
+          clearInterval(spawnTimer);
+        }
+      }, spawnInterval);
+    }
+
+    // Efeitos de partículas para explosões
+    function createExplosion(x, y, color) {
+      for (let i = 0; i < 8; i++) {
+        particles.push({
+          x: x,
+          y: y,
+          vx: (Math.random() - 0.5) * 4,
+          vy: (Math.random() - 0.5) * 4,
+          radius: Math.random() * 3 + 1,
+          color: color,
+          alpha: 1,
+          decay: Math.random() * 0.04 + 0.02
+        });
+      }
+    }
+
+    // Loop Principal de Física e Renderização
+    let lastTime = 0;
+    function gameLoop(timestamp) {
+      if (!lastTime) lastTime = timestamp;
+      const deltaTime = timestamp - lastTime;
+      lastTime = timestamp;
+
+      if (gameActive) {
+        // Atualizações com base na velocidade de jogo selecionada
+        for (let step = 0; step < gameSpeed; step++) {
+          updatePhysics();
+        }
+      }
+
+      render();
+      requestAnimationFrame(gameLoop);
+    }
+
+    // Atualização física e de jogabilidade
+    function updatePhysics() {
+      // 1. Mover Inimigos
+      for (let i = enemies.length - 1; i >= 0; i--) {
+        let enemy = enemies[i];
+        
+        // Se o inimigo está esperando spawn ou na pista, avança seu t
+        enemy.t += enemy.speed;
+
+        // Atualizar timer de piscar de dano
+        if (enemy.flashTime > 0) enemy.flashTime--;
+
+        // Se o inimigo passou do ponto final (t >= 1)
+        if (enemy.t >= 1) {
+          // Remover do array
+          enemies.splice(i, 1);
+          // Reduzir 100 moedas como penalidade
+          coins -= 100;
+          showAlert("Inimigo escapou! -100 Moedas", "error");
+          updateUI();
+
+          // Verificar Condição de Derrota
+          if (coins < 0) {
+            endGame(false);
+            return;
+          }
+          continue;
+        }
+      }
+
+      // 2. IA das Torres: Atacar inimigos ao alcance
+      const now = Date.now();
+      towers.forEach(tower => {
+        // Verificar se tem target válido
+        let target = enemies.find(e => {
+          if (e.t < 0) return false; // Ainda não entrou na tela
+          const pos = getPathPosition(e.t);
+          const dist = Math.hypot(pos.x - tower.x, pos.y - tower.y);
+          return dist <= tower.range;
+        });
+
+        if (target) {
+          // Se recarregou, dispara projétil
+          if (!tower.lastShot || now - tower.lastShot >= tower.fireRate) {
+            projectiles.push({
+              x: tower.x,
+              y: tower.y,
+              targetId: target.id,
+              speed: 7,
+              damage: tower.damage,
+              color: tower.bulletColor,
+              radius: 4,
+              splash: tower.id === 3 // Apenas a torre 3 tem splash visual de explosão maior
+            });
+            tower.lastShot = now;
+          }
+        }
+      });
+
+      // 3. Mover e Colidir Projéteis
+      for (let pIdx = projectiles.length - 1; pIdx >= 0; pIdx--) {
+        let proj = projectiles[pIdx];
+        let target = enemies.find(e => e.id === proj.targetId);
+
+        if (!target) {
+          // Se o alvo morreu antes de atingir, tentar guiar para o inimigo mais próximo ou simplesmente explodir no local
+          projectiles.splice(pIdx, 1);
+          continue;
+        }
+
+        const targetPos = getPathPosition(target.t);
+        const dx = targetPos.x - proj.x;
+        const dy = targetPos.y - proj.y;
+        const dist = Math.hypot(dx, dy);
+
+        if (dist <= proj.speed) {
+          // Atingiu o alvo!
+          target.hp -= proj.damage;
+          target.flashTime = 5; // Piscar vermelho por frames
+
+          createExplosion(targetPos.x, targetPos.y, proj.color);
+
+          // Remover projétil
+          projectiles.splice(pIdx, 1);
+
+          // Verificar morte do inimigo
+          if (target.hp <= 0) {
+            const idx = enemies.indexOf(target);
+            if (idx !== -1) {
+              enemies.splice(idx, 1);
+              coins += 25; // Recompensa
+              totalKills++;
+              if (coins > peakCoins) peakCoins = coins;
+              showAlert("+25 Moedas", "success");
+              updateUI();
+            }
+          }
+        } else {
+          // Mover teleguiado
+          proj.x += (dx / dist) * proj.speed;
+          proj.y += (dy / dist) * proj.speed;
+        }
+      }
+
+      // 4. Atualizar Partículas decorativas
+      for (let pIdx = particles.length - 1; pIdx >= 0; pIdx--) {
+        let p = particles[pIdx];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.alpha -= p.decay;
+        if (p.alpha <= 0) {
+          particles.splice(pIdx, 1);
+        }
+      }
+
+      // 5. Checar fim da Horda
+      if (waveInProgress && enemies.length === 0) {
+        waveInProgress = false;
+        wave++;
+        showAlert(`Horda concluída! Próxima horda: ${wave}`, "info");
+        updateUI();
+      }
+    }
+
+    // Renderização no Canvas
+    function render() {
+      // Limpar Canvas
+      ctx.fillStyle = '#090d16';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // 1. Desenhar a Grade de Fundo (Visual Tecnológico)
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 0.5;
+      const gridSize = 40;
+      for (let x = 0; x < canvas.width; x += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
+      }
+      for (let y = 0; y < canvas.height; y += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+      }
+
+      // 2. Desenhar a Trilha da Estrada em S
+      ctx.beginPath();
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 44;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.moveTo(pathPoints[0].x, pathPoints[0].y);
+      for (let i = 1; i < pathPoints.length; i++) {
+        ctx.lineTo(pathPoints[i].x, pathPoints[i].y);
+      }
+      ctx.stroke();
+
+      // Linha tracejada interna da rua
+      ctx.beginPath();
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 36;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.strokeStyle = '#64748b';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([10, 15]);
+      ctx.moveTo(pathPoints[0].x, pathPoints[0].y);
+      for (let i = 1; i < pathPoints.length; i++) {
+        ctx.lineTo(pathPoints[i].x, pathPoints[i].y);
+      }
+      ctx.stroke();
+      ctx.setLineDash([]); // Reset line dash
+
+      // Demarcações de Entrada e Saída
+      ctx.fillStyle = '#10b981'; // Entrada
+      ctx.beginPath();
+      ctx.arc(30, 80, 8, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#f43f5e'; // Saída
+      ctx.beginPath();
+      ctx.arc(770, 420, 8, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 3. Desenhar Raios de Alcance de Torre Selecionada (Se houver interação ativa)
+      if (selectedShopTowerType) {
+        const conf = TOWER_TYPES[selectedShopTowerType];
+        if (mousePos.x !== null) {
+          ctx.beginPath();
+          ctx.arc(mousePos.x, mousePos.y, conf.range, 0, Math.PI * 2);
+          
+          // Verificar validade da posição
+          const isValid = isValidPlacement(mousePos.x, mousePos.y);
+          ctx.fillStyle = isValid ? 'rgba(16, 185, 129, 0.08)' : 'rgba(244, 63, 94, 0.08)';
+          ctx.strokeStyle = isValid ? 'rgba(16, 185, 129, 0.4)' : 'rgba(244, 63, 94, 0.4)';
+          ctx.lineWidth = 1.5;
+          ctx.fill();
+          ctx.stroke();
+        }
+      }
+
+      // 4. Desenhar as Torres Posicionadas
+      towers.forEach(tower => {
+        // Círculo de base de energia da torre
+        ctx.beginPath();
+        ctx.arc(tower.x, tower.y, tower.size + 4, 0, Math.PI * 2);
+        ctx.fillStyle = '#0f172a';
+        ctx.strokeStyle = tower.color;
+        ctx.lineWidth = 2;
+        ctx.fill();
+        ctx.stroke();
+
+        // Núcleo iluminado
+        ctx.beginPath();
+        ctx.arc(tower.x, tower.y, tower.size - 4, 0, Math.PI * 2);
+        ctx.fillStyle = tower.color;
+        ctx.fill();
+
+        // Linha interna futurista estilizada
+        ctx.beginPath();
+        ctx.arc(tower.x, tower.y, tower.size - 8, 0, Math.PI * 2);
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      });
+
+      // 5. Desenhar Inimigos (Quadrados / Carros)
+      enemies.forEach(enemy => {
+        if (enemy.t < 0) return; // Fora da pista ainda
+
+        const pos = getPathPosition(enemy.t);
+
+        ctx.save();
+        ctx.translate(pos.x, pos.y);
+
+        // Se estiver piscando por causa de dano, pinta de vermelho
+        if (enemy.flashTime > 0) {
+          ctx.fillStyle = '#f43f5e';
+        } else {
+          ctx.fillStyle = '#475569'; // Cinza escuro
+        }
+
+        // Desenhar Quadrado/Carro com Cantos Arredondados
+        const size = enemy.size;
+        ctx.beginPath();
+        ctx.rect(-size / 2, -size / 2, size, size);
+        ctx.fill();
+        ctx.strokeStyle = '#94a3b8';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Detalhes estéticos do "carro" de metal
+        ctx.fillStyle = '#38bdf8'; // Janela neon azul
+        ctx.fillRect(-size / 4, -size / 4, size / 2, size / 2);
+
+        // Desenhar Barra de Vida acima do inimigo
+        const barW = size + 6;
+        const barH = 4;
+        const barY = -size / 2 - 8;
+
+        // Fundo cinza escuro
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(-barW / 2, barY, barW, barH);
+
+        // Barra Verde/Vermelha proporcional
+        const hpPercent = Math.max(0, enemy.hp / enemy.maxHp);
+        ctx.fillStyle = hpPercent > 0.5 ? '#10b981' : (hpPercent > 0.25 ? '#eab308' : '#f43f5e');
+        ctx.fillRect(-barW / 2, barY, barW * hpPercent, barH);
+
+        ctx.restore();
+      });
+
+      // 6. Desenhar Projéteis
+      projectiles.forEach(p => {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fillStyle = p.color;
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = 8;
+        ctx.fill();
+        ctx.shadowBlur = 0; // Reset
+      });
+
+      // 7. Desenhar Partículas
+      particles.forEach(p => {
+        ctx.save();
+        ctx.globalAlpha = p.alpha;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fillStyle = p.color;
+        ctx.fill();
+        ctx.restore();
+      });
+    }
+
+    // Lógica de posicionamento válido
+    function isValidPlacement(x, y) {
+      // 1. Evitar fora do canvas
+      if (x < 20 || x > canvas.width - 20 || y < 20 || y > canvas.height - 20) return false;
+
+      // 2. Não posicionar sobre a pista (S-curve)
+      // Checar proximidade com todos os segmentos da reta
+      const pathThreshold = 38; // Raio de exclusão da pista
+      for (let i = 0; i < pathPoints.length - 1; i++) {
+        const dist = distToSegment(
+          { x: x, y: y },
+          pathPoints[i],
+          pathPoints[i+1]
+        );
+        if (dist < pathThreshold) return false;
+      }
+
+      // 3. Não posicionar colidindo com outras torres
+      const towerThreshold = 35;
+      for (let i = 0; i < towers.length; i++) {
+        const dist = Math.hypot(x - towers[i].x, y - towers[i].y);
+        if (dist < towerThreshold) return false;
+      }
+
+      return true;
+    }
+
+    // Funções utilitárias de matemática vetorial
+    function distToSegment(p, v, w) {
+      const l2 = Math.pow(v.x - w.x, 2) + Math.pow(v.y - w.y, 2);
+      if (l2 === 0) return Math.hypot(p.x - v.x, p.y - v.y);
+      let t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2;
+      t = Math.max(0, Math.min(1, t));
+      return Math.hypot(
+        p.x - (v.x + t * (w.x - v.x)),
+        p.y - (v.y + t * (w.y - v.y))
+      );
+    }
+
+    // Coordenações do mouse para renderização e cálculo
+    let mousePos = { x: null, y: null };
+    let selectedShopTowerType = null; // Tipo atualmente selecionado na loja
+
+    // Obter as coordenadas corretas ajustadas ao CSS responsivo do Canvas
+    function getCanvasCoordinates(e) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+
+      let clientX, clientY;
+      if (e.touches && e.touches.length > 0) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+      } else {
+        clientX = e.clientX;
+        clientY = e.clientY;
+      }
+
+      return {
+        x: (clientX - rect.left) * scaleX,
+        y: (clientY - rect.top) * scaleY
+      };
+    }
+
+    // === SISTEMA UNIFICADO DRAG & DROP & CLICK-TO-PLACE ===
+    const shopItems = document.querySelectorAll('.shop-item');
+
+    // 1. Suporte para arrastar no Desktop (HTML5 Drag & Drop)
+    shopItems.forEach(item => {
+      item.addEventListener('dragstart', (e) => {
+        const type = parseInt(item.getAttribute('data-tower-type'));
+        if (coins < TOWER_TYPES[type].cost) {
+          e.preventDefault();
+          showAlert("Moedas insuficientes!", "error");
+          return;
+        }
+        selectedShopTowerType = type;
+        e.dataTransfer.setData('text/plain', type);
+      });
+
+      // Clique simples para posicionar sem arrastar (ótimo para usabilidade geral e celular)
+      item.addEventListener('click', () => {
+        const type = parseInt(item.getAttribute('data-tower-type'));
+        if (coins < TOWER_TYPES[type].cost) {
+          showAlert("Moedas insuficientes!", "error");
+          return;
+        }
+        // Alternar seleção
+        if (selectedShopTowerType === type) {
+          selectedShopTowerType = null;
+        } else {
+          selectedShopTowerType = type;
+          showAlert(`${TOWER_TYPES[type].name} selecionada! Clique no mapa para posicionar.`, 'info');
+        }
+      });
+    });
+
+    // Lidar com arraste no Canvas
+    canvas.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      const coords = getCanvasCoordinates(e);
+      mousePos.x = coords.x;
+      mousePos.y = coords.y;
+    });
+
+    canvas.addEventListener('drop', (e) => {
+      e.preventDefault();
+      const type = parseInt(e.dataTransfer.getData('text/plain')) || selectedShopTowerType;
+      if (!type) return;
+
+      const coords = getCanvasCoordinates(e);
+      placeTower(type, coords.x, coords.y);
+      resetDragDropState();
+    });
+
+    // 2. Eventos Touch / Celular para Arrastar & Clicar
+    // Como HTML5 Drag & Drop pode ser instável no mobile, usamos PointerEvents para simular visualmente
+    let activePointerType = null;
+
+    shopItems.forEach(item => {
+      item.addEventListener('touchstart', (e) => {
+        const type = parseInt(item.getAttribute('data-tower-type'));
+        if (coins < TOWER_TYPES[type].cost) return;
+        
+        selectedShopTowerType = type;
+        const conf = TOWER_TYPES[type];
+        
+        // Ativar Ghost decorativo flutuante
+        dragGhost.style.display = 'block';
+        const ghostInner = dragGhost.querySelector('div:first-child');
+        ghostInner.style.borderColor = conf.color;
+        ghostInner.style.backgroundColor = `${conf.color}33`; // 20% alpha
+        ghostInner.innerHTML = `<i class="fa-solid ${conf.icon} text-lg" style="color: ${conf.color}"></i>`;
+
+        // Definir raio de alcance visualizador
+        dragGhost.querySelector('div:last-child').style.width = `${conf.range * 2}px`;
+        dragGhost.querySelector('div:last-child').style.height = `${conf.range * 2}px`;
+
+        const touch = e.touches[0];
+        updateGhostPosition(touch.clientX, touch.clientY);
+      }, { passive: true });
+    });
+
+    window.addEventListener('touchmove', (e) => {
+      if (!selectedShopTowerType || dragGhost.style.display !== 'block') return;
+      
+      const touch = e.touches[0];
+      updateGhostPosition(touch.clientX, touch.clientY);
+
+      // Atualizar indicador no canvas
+      const rect = canvas.getBoundingClientRect();
+      if (
+        touch.clientX >= rect.left && touch.clientX <= rect.right &&
+        touch.clientY >= rect.top && touch.clientY <= rect.bottom
+      ) {
+        const coords = getCanvasCoordinates(e);
+        mousePos.x = coords.x;
+        mousePos.y = coords.y;
+      } else {
+        mousePos.x = null;
+        mousePos.y = null;
+      }
+    });
+
+    window.addEventListener('touchend', (e) => {
+      if (!selectedShopTowerType) return;
+
+      if (mousePos.x !== null && mousePos.y !== null) {
+        placeTower(selectedShopTowerType, mousePos.x, mousePos.y);
+      }
+
+      resetDragDropState();
+    });
+
+    function updateGhostPosition(x, y) {
+      dragGhost.style.left = `${x}px`;
+      dragGhost.style.top = `${y}px`;
+    }
+
+    function resetDragDropState() {
+      selectedShopTowerType = null;
+      mousePos = { x: null, y: null };
+      dragGhost.style.display = 'none';
+    }
+
+    // 3. Clique Simples no Canvas para posicionar a torre selecionada
+    canvas.addEventListener('mousemove', (e) => {
+      if (!selectedShopTowerType) return;
+      const coords = getCanvasCoordinates(e);
+      mousePos.x = coords.x;
+      mousePos.y = coords.y;
+    });
+
+    canvas.addEventListener('click', (e) => {
+      if (!selectedShopTowerType) return;
+      const coords = getCanvasCoordinates(e);
+      placeTower(selectedShopTowerType, coords.x, coords.y);
+      resetDragDropState();
+    });
+
+    canvas.addEventListener('mouseleave', () => {
+      if (!selectedShopTowerType) return;
+      mousePos = { x: null, y: null };
+    });
+
+    // Função de colocar a torre no campo
+    function placeTower(type, x, y) {
+      const conf = TOWER_TYPES[type];
+      
+      if (coins < conf.cost) {
+        showAlert("Moedas insuficientes!", "error");
+        return;
+      }
+
+      if (!isValidPlacement(x, y)) {
+        showAlert("Posição inválida! Evite a pista ou outras torres.", "error");
+        return;
+      }
+
+      // Descontar dinheiro e criar a torre
+      coins -= conf.cost;
+      towers.push({
+        x: x,
+        y: y,
+        id: conf.id,
+        size: conf.size,
+        color: conf.color,
+        bulletColor: conf.bulletColor,
+        damage: conf.damage,
+        range: conf.range,
+        fireRate: conf.fireRate,
+        lastShot: 0
+      });
+
+      showAlert(`${conf.name} posicionada com sucesso!`, "success");
+      updateUI();
+    }
+
+    // Iniciar Jogo
+    function startGame() {
+      // Reiniciar status do jogo
+      coins = 1000;
+      wave = 1;
+      totalKills = 0;
+      peakCoins = 1000;
+      towers = [];
+      enemies = [];
+      projectiles = [];
+      particles = [];
+      waveInProgress = false;
+      gameSpeed = 1;
+      speedLabel.innerText = "1x Velocidade";
+      btnSpeed.classList.replace('bg-indigo-900/40', 'bg-slate-800');
+      btnSpeed.classList.replace('text-indigo-300', 'text-slate-300');
+
+      // Ocultar modal
+      gameModal.classList.add('hidden');
+      gameActive = true;
+      updateUI();
+    }
+
+    // Fim de Jogo (Vitória ou Derrota)
+    function endGame(victory = false) {
+      gameActive = false;
+      
+      // Configurar Modal para Fim de Jogo
+      modalIcon.innerHTML = `<i class="fa-solid fa-face-sad-tear text-rose-500"></i>`;
+      modalIcon.className = `w-16 h-16 bg-rose-500/10 text-rose-500 rounded-full flex items-center justify-center text-3xl mb-1 shadow-lg border border-rose-500/20`;
+      modalTitle.innerText = "DEFESA FALHOU!";
+      modalTitle.className = "text-2xl font-black tracking-wider text-rose-500 orbitron-font uppercase";
+      modalBody.innerText = "Suas moedas caíram abaixo de zero devido aos inimigos invasores. A saída da pista S foi comprometida!";
+      
+      // Mostrar Pontuação
+      scoreWaves.innerText = wave - 1;
+      scoreKills.innerText = totalKills;
+      scoreMaxGold.innerText = peakCoins;
+      modalScores.classList.remove('hidden');
+
+      modalBtn.innerText = "Tentar Novamente";
+      modalBtn.className = "w-full bg-rose-600 hover:bg-rose-500 active:bg-rose-700 text-white font-bold py-3 px-6 rounded-xl transition duration-150 shadow-md shadow-rose-600/20 uppercase tracking-widest text-sm orbitron-font";
+
+      gameModal.classList.remove('hidden');
+    }
+
+    // Listener de Botão no Modal
+    modalBtn.addEventListener('click', () => {
+      startGame();
+    });
+
+    // Iniciar Loop do Jogo
+    window.onload = function() {
+      requestAnimationFrame(gameLoop);
+      updateUI();
+    };
+  </script>
+</body>
+</html>
+
+```
