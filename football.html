@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Futebol de Botão - 5x5</title>
+    <style>
+        * { box-sizing: border-box; touch-action: none; user-select: none; }
+        body {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #1a1a1a;
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            max-width: 450px;
+            max-height: 800px;
+            background: #2e7d32;
+            border: 8px solid #1b5e20;
+            overflow: hidden;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* HUD Superior */
+        #hud {
+            position: absolute;
+            top: 10px;
+            width: 100%;
+            display: flex;
+            justify-content: space-around;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+            text-shadow: 2px 2px 2px black;
+            z-index: 20;
+            pointer-events: none;
+        }
+
+        /* Indicador do Turno */
+        #turn-info {
+            position: absolute;
+            top: 40px;
+            width: 100%;
+            text-align: center;
+            color: #ffeb3b;
+            font-weight: bold;
+            font-size: 16px;
+            text-shadow: 2px 2px 2px black;
+            z-index: 20;
+            pointer-events: none;
+        }
+
+        /* Mensagens */
+        #msg {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            background: rgba(0,0,0,0.9);
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            display: none;
+            z-index: 100;
+            border: 2px solid #2196f3;
+        }
+
+        button {
+            background: #2196f3;
+            border: none;
+            padding: 10px 20px;
+            color: white;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <div id="hud">
+            <div>AZUL: <span id="score-player">0</span></div>
+            <div>TOQUES: <span id="touches-left" style="color:#4dff88">3/3</span></div>
+            <div>VERMELHO: <span id="score-ai">0</span></div>
+        </div>
+
+        <div id="turn-info">SUA VEZ (SELEICIONE E ARRASTE)</div>
+
+        <div id="msg">
+            <h1 id="status-title">GOOOOL!</h1>
+            <button onclick="resetMatch()">Reiniciar Partida</button>
+        </div>
+
+        <canvas id="field"></canvas>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('field');
+        const ctx = canvas.getContext('2d');
+        const scorePlayerEl = document.getElementById('score-player');
+        const scoreAiEl = document.getElementById('score-ai');
+        const touchesEl = document.getElementById('touches-left');
+        const turnInfoEl = document.getElementById('turn-info');
+        const msgBox = document.getElementById('msg');
+
+        // Configurações do jogo
+        let width, height;
+        const FRICTION = 0.98; // Atrito no campo
+        let scorePlayer = 0;
+        let scoreAi = 0;
+        let touchesLeft = 3;
+        let currentTurn = 'player'; // 'player' ou 'ai'
+        let isMoving = false;
+        let selectedPiece = null;
+        let dragStart = null;
+        let dragCurrent = null;
+
+        // Entidades
+        let ball;
+        let pieces = [];
+
+        class Ball {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.vx = 0;
+                this.vy = 0;
+                this.radius = 8;
+                this.color = '#1976d2'; // Bola Azul conforme solicitado
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vx *= FRICTION;
+                this.vy *= FRICTION;
+
+                // Colisão com as paredes verticais
+                if (this.x - this.radius < 10) { this.x = 10 + this.radius; this.vx *= -1; }
+                if (this.x + this.radius > width - 10) { this.x = width - 10 - this.radius; this.vx *= -1; }
+
+                // Colisão com as traves/linhas de fundo
+                const goalWidth = width * 0.4;
+                const goalMinX = (width - goalWidth) / 2;
+                const goalMaxX = goalMinX + goalWidth;
+
+                // Linha do Gol do Topo (Gol da IA)
+                if (this.y - this.radius < 10) {
+                    if (this.x > goalMinX && this.x < goalMaxX) {
+                        goalScored('player');
+                    } else {
+                        this.y = 10 + this.radius;
+                        this.vy *= -1;
+                    }
+                }
+
+                // Linha do Gol de Baixo (Gol do Jogador)
+                if (this.y + this.radius > height - 10) {
+                    if (this.x > goalMinX && this.x < goalMaxX) {
+                        goalScored('ai');
+                    } else {
+                        this.y = height - 10 - this.radius;
+                        this.vy *= -1;
+                    }
+                }
+            }
+
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+        }
+
+        class Piece {
+            constructor(x, y, team, isKeeper = false) {
+                this.x = x;
+                this.y = y;
+                this.vx = 0;
+                this.vy = 0;
+                this.team = team; // 'player', 'ai', ou 'keeper'
+                this.isKeeper = isKeeper;
+                this.radius = isKeeper ? 18 : 16;
+                
+                if (isKeeper) {
+                    this.color = '#ffffff'; // Goleiro Branco
+                } else {
+                    this.color = team === 'player' ? '#2196f3' : '#f44336'; // Azul vs Vermelho
+                }
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vx *= FRICTION;
+                this.vy *= FRICTION;
+
+                // Limites do campo
+                if (this.x - this.radius < 10) { this.x = 10 + this.radius; this.vx *= -1; }
+                if (this.x + this.radius > width - 10) { this.x = width - 10 - this.radius; this.vx *= -1; }
+                if (this.y - this.radius < 10) { this.y = 10 + this.radius; this.vy *= -1; }
+                if (this.y + this.radius > height - 10) { this.y = height - 10 - this.radius; this.vy *= -1; }
+            }
+
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+                // Anel interno de acabamento
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius * 0.6, 0, Math.PI * 2);
+                ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+            }
+        }
+
+        function resizeCanvas() {
+            const container = document.getElementById('game-container');
+            width = container.clientWidth;
+            height = container.clientHeight;
+            canvas.width = width;
+            canvas.height = height;
+        }
+
+        function initPositions() {
+            pieces = [];
+            const goalWidth = width * 0.4;
+
+            // Bola no centro
+            ball = new Ball(width / 2, height / 2);
+
+            // Time do Jogador (Azul - 5 peças: 4 linha + 1 goleiro branco)
+            pieces.push(new Piece(width / 2, height - 30, 'player', true)); // Goleiro
+            pieces.push(new Piece(width * 0.2, height * 0.75, 'player'));
+            pieces.push(new Piece(width * 0.8, height * 0.75, 'player'));
+            pieces.push(new Piece(width * 0.35, height * 0.6, 'player'));
+            pieces.push(new Piece(width * 0.65, height * 0.6, 'player'));
+
+            // Time da IA (Vermelho - 5 peças: 4 linha + 1 goleiro branco)
+            pieces.push(new Piece(width / 2, 30, 'ai', true)); // Goleiro
+            pieces.push(new Piece(width * 0.2, height * 0.25, 'ai'));
+            pieces.push(new Piece(width * 0.8, height * 0.25, 'ai'));
+            pieces.push(new Piece(width * 0.35, height * 0.4, 'ai'));
+            pieces.push(new Piece(width * 0.65, height * 0.4, 'ai'));
+        }
+
+        function drawField() {
+            // Fundo
+            ctx.fillStyle = '#2e7d32';
+            ctx.fillRect(0, 0, width, height);
+
+            // Marcações do campo
+            ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+            ctx.lineWidth = 2;
+
+            // Linha central e círculo
+            ctx.beginPath();
+            ctx.moveTo(10, height / 2);
+            ctx.lineTo(width - 10, height / 2);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.arc(width / 2, height / 2, 45, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Bordas
+            ctx.strokeRect(10, 10, width - 20, height - 20);
+
+            // Gols
+            const goalWidth = width * 0.4;
+            const goalMinX = (width - goalWidth) / 2;
+            
+            // Gol Topo (IA)
+            ctx.fillStyle = 'rgba(255,255,255,0.2)';
+            ctx.fillRect(goalMinX, 2, goalWidth, 8);
+            ctx.strokeRect(goalMinX, 2, goalWidth, 8);
+
+            // Gol Baixo (Jogador)
+            ctx.fillRect(goalMinX, height - 10, goalWidth, 8);
+            ctx.strokeRect(goalMinX, height - 10, goalWidth, 8);
+        }
+
+        function resolveCollisions() {
+            const all = [...pieces, ball];
+
+            for (let i = 0; i < all.length; i++) {
+                for (let j = i + 1; j < all.length; j++) {
+                    let p1 = all[i];
+                    let p2 = all[j];
+
+                    let dx = p2.x - p1.x;
+                    let dy = p2.y - p1.y;
+                    let dist = Math.hypot(dx, dy);
+                    let minDist = p1.radius + p2.radius;
+
+                    if (dist < minDist) {
+                        let angle = Math.atan2(dy, dx);
+                        let overlap = minDist - dist;
+
+                        // Afastar objetos
+                        let targetX = p1.x + Math.cos(angle) * minDist;
+                        let targetY = p1.y + Math.sin(angle) * minDist;
+                        let ax = (targetX - p2.x) * 0.5;
+                        let ay = (targetY - p2.y) * 0.5;
+
+                        p1.x -= ax;
+                        p1.y -= ay;
+                        p2.x += ax;
+                        p2.y += ay;
+
+                        // Transferência simples de momento
+                        let nx = dx / dist;
+                        let ny = dy / dist;
+                        let kx = p1.vx - p2.vx;
+                        let ky = p1.vy - p2.vy;
+                        let p = 2 * (nx * kx + ny * ky) / 2;
+
+                        p1.vx -= p * nx;
+                        p1.vy -= p * ny;
+                        p2.vx += p * nx;
+                        p2.vy += p * ny;
+                    }
+                }
+            }
+        }
+
+        function checkMovementState() {
+            const all = [...pieces, ball];
+            let moving = false;
+
+            for (let p of all) {
+                if (Math.abs(p.vx) > 0.05 || Math.abs(p.vy) > 0.05) {
+                    moving = true;
+                    break;
+                } else {
+                    p.vx = 0;
+                    p.vy = 0;
+                }
+            }
+
+            if (isMoving && !moving) {
+                // Parou de mover após uma jogada
+                isMoving = false;
+                touchesLeft--;
+
+                if (touchesLeft <= 0) {
+                    switchTurn();
+                } else {
+                    updateHUD();
+                    if (currentTurn === 'ai') setTimeout(playAITurn, 600);
+                }
+            }
+        }
+
+        function switchTurn() {
+            currentTurn = currentTurn === 'player' ? 'ai' : 'player';
+            touchesLeft = 3;
+            updateHUD();
+
+            if (currentTurn === 'ai') {
+                setTimeout(playAITurn, 800);
+            }
+        }
+
+        function updateHUD() {
+            touchesEl.innerText = `${touchesLeft}/3`;
+            if (currentTurn === 'player') {
+                turnInfoEl.innerText = "SUA VEZ (SELEICIONE E ARRASTE)";
+                turnInfoEl.style.color = "#ffeb3b";
+            } else {
+                turnInfoEl.innerText = "VEZ DO COMPUTADOR...";
+                turnInfoEl.style.color = "#ff4d4d";
+            }
+        }
+
+        function playAITurn() {
+            if (currentTurn !== 'ai' || isMoving) return;
+
+            // Encontrar peças da IA (Vermelho)
+            const aiPieces = pieces.filter(p => p.team === 'ai' && !p.isKeeper);
+
+            // IA busca o botão mais próximo da bola ou em melhor posição para chutar
+            let bestPiece = aiPieces[0];
+            let bestScore = -Infinity;
+
+            for (let p of aiPieces) {
+                let distToBall = Math.hypot(ball.x - p.x, ball.y - p.y);
+                let score = -distToBall;
+                
+                // Dar preferência se a peça estiver atrás da bola (em relação ao gol adversário)
+                if (p.y < ball.y) score += 100;
+
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestPiece = p;
+                }
+            }
+
+            if (bestPiece) {
+                // Calcular vetor em direção à bola com um pequeno desvio para mirar no gol
+                const goalWidth = width * 0.4;
+                const goalTargetX = (width / 2) + (Math.random() * goalWidth - goalWidth / 2);
+                const goalTargetY = height - 10; // Gol do Jogador
+
+                // Direção bola -> gol
+                let dirX = goalTargetX - ball.x;
+                let dirY = goalTargetY - ball.y;
+                let len = Math.hypot(dirX, dirY);
+                dirX /= len; dirY /= len;
+
+                // Ponto ideal para bater na bola
+                let targetX = ball.x - dirX * 10;
+                let targetY = ball.y - dirY * 10;
+
+                // Força do chute da IA
+                let force = 8 + Math.random() * 6;
+                let shootAngle = Math.atan2(targetY - bestPiece.y, targetX - bestPiece.x);
+
+                bestPiece.vx = Math.cos(shootAngle) * force;
+                bestPiece.vy = Math.sin(shootAngle) * force;
+                isMoving = true;
+            }
+        }
+
+        // --- Eventos de Interação do Jogador ---
+        function getPointerPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            return {
+                x: clientX - rect.left,
+                y: clientY - rect.top
+            };
+        }
+
+        canvas.addEventListener('pointerdown', (e) => {
+            if (currentTurn !== 'player' || isMoving) return;
+            const pos = getPointerPos(e);
+
+            // Verificar se clicou em um botão do jogador
+            for (let p of pieces) {
+                if (p.team === 'player' || (p.isKeeper && p.team === 'player')) {
+                    let dist = Math.hypot(pos.x - p.x, pos.y - p.y);
+                    if (dist < p.radius + 10) {
+                        selectedPiece = p;
+                        dragStart = { x: p.x, y: p.y };
+                        dragCurrent = pos;
+                        break;
+                    }
+                }
+            }
+        });
+
+        canvas.addEventListener('pointermove', (e) => {
+            if (selectedPiece && dragStart) {
+                dragCurrent = getPointerPos(e);
+            }
+        });
+
+        canvas.addEventListener('pointerup', () => {
+            if (selectedPiece && dragStart && dragCurrent) {
+                let dx = dragStart.x - dragCurrent.x;
+                let dy = dragStart.y - dragCurrent.y;
+                let dist = Math.hypot(dx, dy);
+
+                if (dist > 5) {
+                    let force = Math.min(dist * 0.12, 16); // Limite de força
+                    let angle = Math.atan2(dy, dx);
+
+                    selectedPiece.vx = Math.cos(angle) * force;
+                    selectedPiece.vy = Math.sin(angle) * force;
+                    isMoving = true;
+                }
+
+                selectedPiece = null;
+                dragStart = null;
+                dragCurrent = null;
+            }
+        });
+
+        function drawAimLine() {
+            if (selectedPiece && dragStart && dragCurrent) {
+                ctx.beginPath();
+                ctx.moveTo(selectedPiece.x, selectedPiece.y);
+
+                let dx = dragStart.x - dragCurrent.x;
+                let dy = dragStart.y - dragCurrent.y;
+                
+                // Desenha a linha de mira (vetor oposto ao arraste)
+                ctx.lineTo(selectedPiece.x + dx, selectedPiece.y + dy);
+                ctx.strokeStyle = '#ffeb3b';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+                // Círculo indicando força
+                ctx.beginPath();
+                ctx.arc(selectedPiece.x + dx, selectedPiece.y + dy, 5, 0, Math.PI * 2);
+                ctx.fillStyle = '#ffeb3b';
+                ctx.fill();
+            }
+        }
+
+        function goalScored(winner) {
+            if (winner === 'player') {
+                scorePlayer++;
+                scorePlayerEl.innerText = scorePlayer;
+                document.getElementById('status-title').innerText = "GOOOOL DO AZUL! ⚽";
+            } else {
+                scoreAi++;
+                scoreAiEl.innerText = scoreAi;
+                document.getElementById('status-title').innerText = "GOL DO VERMELHO! 💀";
+            }
+
+            msgBox.style.display = 'block';
+            isMoving = false;
+        }
+
+        function resetMatch() {
+            msgBox.style.display = 'none';
+            initPositions();
+            currentTurn = 'player';
+            touchesLeft = 3;
+            updateHUD();
+        }
+
+        function loop() {
+            ctx.clearRect(0, 0, width, height);
+
+            drawField();
+
+            // Atualiza física
+            ball.update();
+            for (let p of pieces) p.update();
+
+            resolveCollisions();
+            checkMovementState();
+
+            // Desenha elementos
+            ball.draw();
+            for (let p of pieces) p.draw();
+
+            drawAimLine();
+
+            requestAnimationFrame(loop);
+        }
+
+        // Inicialização
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+            initPositions();
+        });
+
+        resizeCanvas();
+        initPositions();
+        loop();
+    </script>
+</body>
+</html>

@@ -1,0 +1,1245 @@
+```html
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Operação Tática: Linha de Frente</title>
+    <!-- Tailwind CSS para um design moderno e elegante -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons para símbolos de interface -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Chareon&family=Inter:wght@300;400;600;700;800&family=Rajdhani:wght@500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0b0f19;
+        }
+        .font-military {
+            font-family: 'Rajdhani', sans-serif;
+        }
+        /* Custom scrollbar para o Log */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111827;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #374151;
+            border-radius: 3px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #4b5563;
+        }
+        /* Efeito de Scanline militar */
+        .scanlines {
+            position: relative;
+            overflow: hidden;
+        }
+        .scanlines::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 10;
+            background-size: 100% 4px, 6px 100%;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="text-gray-100 min-h-screen flex flex-col justify-between scanlines">
+
+    <!-- Header Principal -->
+    <header class="bg-slate-900 border-b border-slate-800 py-3 px-6 flex justify-between items-center shadow-lg z-20">
+        <div class="flex items-center space-x-3">
+            <div class="bg-emerald-600 p-2 rounded-lg text-white animate-pulse">
+                <i data-lucide="shield-alert" class="w-6 h-6"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold font-military tracking-wider text-emerald-400 uppercase">Operação Tática</h1>
+                <p class="text-xs text-slate-400">Guerra Psicológica & Patentes</p>
+            </div>
+        </div>
+        <div class="flex items-center space-x-4">
+            <div class="bg-slate-800 px-3 py-1.5 rounded border border-slate-700 text-xs flex items-center space-x-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
+                <span class="font-semibold text-emerald-400" id="game-state-label">FASE DE POSICIONAMENTO</span>
+            </div>
+            <button onclick="reiniciarJogo()" class="bg-slate-800 hover:bg-rose-950 hover:text-rose-400 text-slate-300 p-2 rounded border border-slate-700 transition duration-200" title="Reiniciar Partida">
+                <i data-lucide="rotate-ccw" class="w-5 h-5"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Layout Principal -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        <!-- PAINEL LATERAL ESQUERDO: Unidades Disponíveis / Info do Turno -->
+        <div class="lg:col-span-3 bg-slate-900/90 border border-slate-800 rounded-xl p-4 shadow-xl backdrop-blur flex flex-col justify-between min-h-[580px]">
+            <div>
+                <div class="flex justify-between items-center pb-3 border-b border-slate-800 mb-4">
+                    <h2 class="font-military font-bold text-lg text-slate-300 tracking-wide">QUARTEL GENERAL</h2>
+                    <span class="text-xs bg-slate-800 text-slate-400 px-2 py-0.5 rounded" id="placed-counter">0 / 14</span>
+                </div>
+                
+                <!-- Descrição da fase ou status atual -->
+                <div id="instruction-panel" class="bg-slate-950 p-3 rounded-lg mb-4 border border-slate-800/80 text-xs text-slate-300 leading-relaxed">
+                    <p class="font-bold text-emerald-400 mb-1">Fase de Preparação:</p>
+                    Selecione uma patente abaixo e clique nas posições destacadas em verde no tabuleiro (linhas 8 e 9) para posicionar o seu exército taticamente.
+                </div>
+
+                <!-- Painel de Seleção de Peças (Setup) -->
+                <div id="setup-panel" class="space-y-2">
+                    <!-- Gerado dinamicamente via JS -->
+                </div>
+
+                <!-- Painel de Informação de Combates Ativos -->
+                <div id="active-combat-panel" class="hidden mt-4 p-3 bg-slate-950 rounded-lg border border-red-950">
+                    <h3 class="text-xs font-bold text-rose-400 mb-2 font-military tracking-widest uppercase">Último Confronto</h3>
+                    <div class="flex items-center justify-between text-xs">
+                        <div class="text-center bg-emerald-950/40 p-2 rounded w-5/12 border border-emerald-800/30">
+                            <span class="block text-[10px] text-emerald-500 font-bold">VOCÊ</span>
+                            <span id="combat-player-name" class="font-semibold block truncate">???</span>
+                        </div>
+                        <div class="text-red-500 font-bold text-sm">VS</div>
+                        <div class="text-center bg-rose-950/40 p-2 rounded w-5/12 border border-rose-800/30">
+                            <span class="block text-[10px] text-rose-500 font-bold">INIMIGO</span>
+                            <span id="combat-ai-name" class="font-semibold block truncate">???</span>
+                        </div>
+                    </div>
+                    <div id="combat-result-text" class="text-center text-xs mt-2 text-amber-400 italic"></div>
+                </div>
+            </div>
+
+            <!-- Botões de Ação de Preparação -->
+            <div class="pt-4 border-t border-slate-800 space-y-2">
+                <button id="btn-auto-place" onclick="autoColocarJogador()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 py-2.5 px-4 rounded-lg font-semibold text-sm transition duration-150 flex items-center justify-center space-x-2">
+                    <i data-lucide="cpu" class="w-4 h-4"></i>
+                    <span>Posicionamento Automático</span>
+                </button>
+                <button id="btn-start-game" onclick="confirmarPosicionamento()" class="w-full bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:text-slate-500 text-white py-3 px-4 rounded-lg font-bold text-sm tracking-wider uppercase transition duration-150 shadow-md shadow-emerald-900/20" disabled>
+                    Iniciar Combate
+                </button>
+            </div>
+        </div>
+
+        <!-- PAINEL CENTRAL: Tabuleiro 10x10 -->
+        <div class="lg:col-span-6 flex flex-col items-center">
+            <!-- Marcadores de coordenadas e indicador do oponente no topo -->
+            <div class="w-full max-w-[500px] flex justify-between items-center mb-2 px-1">
+                <div class="flex items-center space-x-2">
+                    <div class="w-3 h-3 rounded-full bg-red-600"></div>
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider font-military">Território do Computador (Linhas 0-1)</span>
+                </div>
+                <div class="text-xs font-semibold text-slate-500">TABULEIRO 10x10</div>
+            </div>
+
+            <!-- Tabuleiro Grid -->
+            <div id="board-container" class="relative bg-slate-950 p-2.5 rounded-2xl border-2 border-slate-800 shadow-2xl w-full max-w-[510px] aspect-square">
+                <div id="board" class="grid grid-cols-10 gap-1 w-full h-full">
+                    <!-- 100 Células geradas via JS -->
+                </div>
+            </div>
+
+            <!-- Indicador do Jogador na Base -->
+            <div class="w-full max-w-[500px] flex justify-between items-center mt-2 px-1">
+                <div class="flex items-center space-x-2">
+                    <div class="w-3 h-3 rounded-full bg-emerald-500"></div>
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider font-military">Sua Linha de Defesa (Linhas 8-9)</span>
+                </div>
+                <div class="flex space-x-4 text-xs font-bold text-slate-400">
+                    <span class="flex items-center"><span class="w-2 h-2 rounded-full bg-emerald-500 mr-1"></span> Ativos: <span id="count-player-active" class="ml-1 text-emerald-400">0</span></span>
+                    <span class="flex items-center"><span class="w-2 h-2 rounded-full bg-rose-500 mr-1"></span> Baixas: <span id="count-player-dead" class="ml-1 text-rose-400">0</span></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- PAINEL LATERAL DIREITO: LOG / DIÁRIO DE COMBATE -->
+        <div class="lg:col-span-3 bg-slate-900/90 border border-slate-800 rounded-xl p-4 shadow-xl backdrop-blur flex flex-col h-[580px] justify-between">
+            <div class="flex flex-col h-full">
+                <div class="flex justify-between items-center pb-3 border-b border-slate-800 mb-3">
+                    <div class="flex items-center space-x-2">
+                        <i data-lucide="terminal" class="w-4 h-4 text-emerald-500"></i>
+                        <h2 class="font-military font-bold text-lg text-slate-300 tracking-wide">DIÁRIO DE JOGADAS</h2>
+                    </div>
+                    <button onclick="limparLogs()" class="text-xs text-slate-500 hover:text-slate-400">Limpar</button>
+                </div>
+                
+                <!-- Área de Logs (Memo) -->
+                <div id="logs-container" class="flex-1 bg-slate-950 rounded-lg p-3 border border-slate-800 custom-scrollbar overflow-y-auto text-xs space-y-2 font-mono">
+                    <!-- Logs adicionados via JS -->
+                    <div class="text-slate-500 italic">Aguardando posicionamento das tropas...</div>
+                </div>
+                
+                <!-- Guia de Patentes Rápida -->
+                <div class="mt-4 p-3 bg-slate-950/70 border border-slate-800/80 rounded-lg">
+                    <span class="text-[10px] uppercase tracking-wider font-bold text-slate-500 block mb-1">Guia de Combate Rápido</span>
+                    <ul class="text-[10px] text-slate-400 space-y-1">
+                        <li class="flex items-center justify-between">
+                            <span>Hierarquia de Força:</span>
+                            <span class="text-amber-400 font-semibold">General > Major > ... > Soldado > Espião</span>
+                        </li>
+                        <li class="flex items-center justify-between">
+                            <span>Regra do Espião 🕵️:</span>
+                            <span class="text-emerald-400">Ataca e derrota o General 👑</span>
+                        </li>
+                        <li class="flex items-center justify-between">
+                            <span>Regra das Bombas 💣:</span>
+                            <span class="text-rose-400">Imóveis. Apenas o Cabo 🛡️ as desarma.</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal de Vitória / Derrota -->
+    <div id="game-over-modal" class="fixed inset-0 bg-slate-950/90 z-50 flex items-center justify-center hidden backdrop-blur-sm">
+        <div class="bg-slate-900 border border-slate-800 p-8 rounded-2xl max-w-md w-full mx-4 shadow-2xl text-center">
+            <div id="game-over-icon-container" class="w-20 h-20 rounded-full mx-auto flex items-center justify-center mb-4">
+                <i id="game-over-icon" class="w-10 h-10"></i>
+            </div>
+            <h2 id="game-over-title" class="text-3xl font-bold font-military tracking-wider mb-2"></h2>
+            <p id="game-over-message" class="text-slate-400 text-sm mb-6"></p>
+            <button onclick="reiniciarJogo()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-8 rounded-xl transition duration-150 uppercase tracking-widest text-sm shadow-lg shadow-emerald-900/30">
+                Iniciar Nova Campanha
+            </button>
+        </div>
+    </div>
+
+    <!-- Rodapé -->
+    <footer class="bg-slate-950 border-t border-slate-900 py-3 text-center text-xs text-slate-600 z-20">
+        Operação Tática &copy; 2026. Desenvolvido para simulações e treinos táticos contra IA.
+    </footer>
+
+    <!-- Lógica de Áudio Engine (Web Audio API) -->
+    <script>
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        function playSound(type) {
+            try {
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                
+                if (type === 'click') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(110, audioCtx.currentTime + 0.1);
+                    gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+                    gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.1);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.1);
+                } else if (type === 'place') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(220, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(330, audioCtx.currentTime + 0.15);
+                    gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                    gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.15);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.15);
+                } else if (type === 'combat_win') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(261.63, audioCtx.currentTime); // C4
+                    osc.frequency.setValueAtTime(329.63, audioCtx.currentTime + 0.1); // E4
+                    osc.frequency.setValueAtTime(392.00, audioCtx.currentTime + 0.2); // G4
+                    gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+                    gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.4);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.4);
+                } else if (type === 'combat_lose') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(220, audioCtx.currentTime);
+                    osc.frequency.linearRampToValueAtTime(110, audioCtx.currentTime + 0.3);
+                    gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                    gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.3);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.3);
+                } else if (type === 'bomb') {
+                    // White noise approximate for explosion
+                    const bufferSize = audioCtx.sampleRate * 0.4;
+                    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                    const data = buffer.getChannelData(0);
+                    for (let i = 0; i < bufferSize; i++) {
+                        data[i] = Math.random() * 2 - 1;
+                    }
+                    const noise = audioCtx.createBufferSource();
+                    noise.buffer = buffer;
+                    const noiseFilter = audioCtx.createBiquadFilter();
+                    noiseFilter.type = 'lowpass';
+                    noiseFilter.frequency.setValueAtTime(1000, audioCtx.currentTime);
+                    noiseFilter.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.4);
+                    noise.connect(noiseFilter);
+                    noiseFilter.connect(gain);
+                    gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+                    gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.4);
+                    noise.start();
+                    noise.stop(audioCtx.currentTime + 0.4);
+                }
+            } catch (e) {
+                console.log("Audio not allowed yet or error: ", e);
+            }
+        }
+    </script>
+
+    <!-- Lógica Geral do Jogo -->
+    <script>
+        // CONFIGURAÇÕES DA PATENTE DO EXÉRCITO
+        // Quantidade: 2 bomb, 4 soldados, 2 cabo, 1 espião, 2 tenente, 1 major, 1 capitão, 1 general
+        const PATENTES = {
+            'bomba':    { nome: 'Bomba',    sigla: 'B',  forca: 0,  cor: 'bg-rose-950 border-rose-600 text-rose-400',       icon: 'bomb',       qtd: 2, desc: 'Imóvel. Explode invasores exceto Cabos.' },
+            'espiao':   { nome: 'Espião',   sigla: 'E',  forca: 1,  cor: 'bg-violet-950 border-violet-600 text-violet-400', icon: 'spy',       qtd: 1, desc: 'Derruba o General se for o Atacante.' },
+            'soldado':  { nome: 'Soldado',  sigla: 'S',  forca: 2,  cor: 'bg-emerald-950 border-emerald-600 text-emerald-400', icon: 'shield',    qtd: 4, desc: 'Militar básico. Ótimo para exploração.' },
+            'cabo':     { nome: 'Cabo',     sigla: 'C',  forca: 3,  cor: 'bg-teal-950 border-teal-600 text-teal-400',       icon: 'shield-check',qtd: 2, desc: 'Especialista em desarmar Bombas.' },
+            'tenente':  { nome: 'Tenente',  sigla: 'T',  forca: 4,  cor: 'bg-blue-950 border-blue-600 text-blue-400',       icon: 'award',      qtd: 2, desc: 'Oficial júnior com boa ofensiva.' },
+            'capitao':  { nome: 'Capitão',  sigla: 'CP', forca: 5,  cor: 'bg-indigo-950 border-indigo-600 text-indigo-400', icon: 'star',       qtd: 1, desc: 'Líder experiente em combate.' },
+            'major':    { nome: 'Major',    sigla: 'M',  forca: 6,  cor: 'bg-amber-950 border-amber-600 text-amber-400',   icon: 'badge-alert',qtd: 1, desc: 'Alto comando militar.' },
+            'general':  { nome: 'General',  sigla: 'G',  forca: 7,  cor: 'bg-red-950 border-red-600 text-red-400',       icon: 'crown',      qtd: 1, desc: 'Peça mais forte do exército.' }
+        };
+
+        // Estado do Jogo
+        let gameState = 'SETUP'; // 'SETUP', 'PLAYER_TURN', 'AI_TURN', 'GAME_OVER'
+        let board = Array(100).fill(null); // Tabuleiro 10x10 unidimensional
+        let playerInventory = {}; // Peças ainda não colocadas pelo jogador
+        let selectedPatenteForPlacement = null;
+        let selectedBoardCellIndex = null;
+        let lastSelectedPieceToMove = null;
+        let possibleMoves = [];
+        
+        // Histórico de movimentos conhecidos da IA sobre as peças do Jogador
+        // Se a peça se moveu, a IA sabe que NÃO é bomba.
+        let playerPiecesMoved = new Set(); 
+        let aiKnownPlayerPieces = {}; // Guarda o que a IA já descobriu sobre o jogador
+
+        // Inicializar Inventário do Jogador
+        function initInventory() {
+            playerInventory = {};
+            for (let k in PATENTES) {
+                playerInventory[k] = PATENTES[k].qtd;
+            }
+        }
+
+        // Inicializar Tabuleiro
+        function initBoard() {
+            board = Array(100).fill(null);
+            playerPiecesMoved.clear();
+            aiKnownPlayerPieces = {};
+            lastSelectedPieceToMove = null;
+            possibleMoves = [];
+        }
+
+        // Renderizar Inventário de Configuração
+        function renderSetupInventory() {
+            const container = document.getElementById('setup-panel');
+            if (gameState !== 'SETUP') {
+                container.innerHTML = `<div class="text-xs text-slate-500 italic p-4 text-center border border-slate-800 rounded bg-slate-950">Fase de posicionamento concluída. As patentes estão em campo.</div>`;
+                return;
+            }
+
+            container.innerHTML = '';
+            let totalRemaining = 0;
+
+            for (let key in PATENTES) {
+                const pat = PATENTES[key];
+                const qtd = playerInventory[key];
+                totalRemaining += qtd;
+
+                const isSelected = selectedPatenteForPlacement === key;
+                const card = document.createElement('div');
+                card.className = `p-2.5 rounded-lg border text-left cursor-pointer transition flex items-center justify-between ${
+                    qtd > 0 
+                    ? isSelected 
+                        ? 'border-emerald-500 bg-emerald-950/40 text-emerald-300 shadow shadow-emerald-500/20' 
+                        : 'border-slate-800 bg-slate-950 hover:bg-slate-800/60 text-slate-300'
+                    : 'border-slate-900 bg-slate-900/30 text-slate-600 cursor-not-allowed'
+                }`;
+
+                card.onclick = () => {
+                    if (qtd > 0) {
+                        playSound('click');
+                        selectedPatenteForPlacement = isSelected ? null : key;
+                        renderSetupInventory();
+                        highlightPlacementZones();
+                    }
+                };
+
+                card.innerHTML = `
+                    <div class="flex items-center space-x-2.5">
+                        <div class="w-8 h-8 rounded-md flex items-center justify-center font-bold text-sm ${pat.cor}">
+                            ${getSvgIcon(pat.icon, "w-4 h-4")}
+                        </div>
+                        <div>
+                            <div class="font-semibold text-xs flex items-center space-x-1">
+                                <span>${pat.nome}</span>
+                                <span class="text-[10px] bg-slate-800 px-1 py-0.2 rounded text-slate-400 font-normal">F: ${pat.forca}</span>
+                            </div>
+                            <div class="text-[10px] text-slate-400">${pat.desc}</div>
+                        </div>
+                    </div>
+                    <div class="font-military text-sm font-bold bg-slate-900 px-2.5 py-1 rounded border border-slate-800">
+                        x${qtd}
+                    </div>
+                `;
+                container.innerHTML += card.outerHTML;
+            }
+
+            document.getElementById('placed-counter').innerText = `${14 - totalRemaining} / 14`;
+            
+            // Habilitar botão se todas colocadas
+            const btnStart = document.getElementById('btn-start-game');
+            if (totalRemaining === 0) {
+                btnStart.removeAttribute('disabled');
+                document.getElementById('instruction-panel').innerHTML = `
+                    <p class="font-bold text-emerald-400 mb-1">Pronto para a Batalha!</p>
+                    Todas as tropas foram posicionadas. Clique no botão de confirmação para iniciar o combate contra a IA.
+                `;
+            } else {
+                btnStart.setAttribute('disabled', 'true');
+            }
+        }
+
+        // Retorna o SVG embutido de acordo com o ícone para evitar dependências de CDN
+        function getSvgIcon(iconName, classes = "w-5 h-5") {
+            const icons = {
+                'bomb': `<svg class="${classes}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="13" r="8"/><path d="M11 9v4M8 13h6M16 8l3-3M19 5l1.5 1.5"/></svg>`,
+                'spy': `<svg class="${classes}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 21a8 8 0 0 1 13.292-6M10 10a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/><path d="M14 14l5 5M17 17l4 4"/></svg>`,
+                'shield': `<svg class="${classes}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
+                'shield-check': `<svg class="${classes}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 11 2 2 4-4"/></svg>`,
+                'award': `<svg class="${classes}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="7"/><path d="M8.21 13.89 7 23l5-3 5 3-1.21-9.12"/></svg>`,
+                'star': `<svg class="${classes}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
+                'badge-alert': `<svg class="${classes}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>`,
+                'crown': `<svg class="${classes}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z"/><path d="M3 20h18v2H3z"/></svg>`,
+                'question': `<svg class="${classes}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>`
+            };
+            return icons[iconName] || icons['shield'];
+        }
+
+        // Adicionar Logs (Memo)
+        function addLog(text, category = 'neutral') {
+            const container = document.getElementById('logs-container');
+            
+            // Remover texto "Aguardando posicionamento"
+            if (container.innerHTML.includes("Aguardando posicionamento")) {
+                container.innerHTML = '';
+            }
+
+            const time = new Date().toLocaleTimeString('pt-PT', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            
+            let colorClass = "text-slate-400";
+            let prefix = "[INFO]";
+            if (category === 'player') { colorClass = "text-emerald-400"; prefix = "[JOGADOR]"; }
+            else if (category === 'ai') { colorClass = "text-rose-400"; prefix = "[INIMIGO]"; }
+            else if (category === 'combat_win') { colorClass = "text-green-500 font-semibold"; prefix = "[VITÓRIA]"; }
+            else if (category === 'combat_lose') { colorClass = "text-red-500 font-semibold"; prefix = "[BAIXA]"; }
+            else if (category === 'combat_tie') { colorClass = "text-amber-500 font-semibold"; prefix = "[EMPATE]"; }
+
+            const logEl = document.createElement('div');
+            logEl.className = `${colorClass} pb-1 border-b border-slate-900 last:border-0 leading-tight`;
+            logEl.innerHTML = `<span class="text-slate-600">[${time}]</span> <span class="font-semibold">${prefix}</span> ${text}`;
+            container.appendChild(logEl);
+            
+            // Auto scroll
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function limparLogs() {
+            document.getElementById('logs-container').innerHTML = `<div class="text-slate-500 italic">Histórico reiniciado.</div>`;
+        }
+
+        // Renderização Inicial do Tabuleiro
+        function renderBoard() {
+            const boardEl = document.getElementById('board');
+            boardEl.innerHTML = '';
+
+            for (let i = 0; i < 100; i++) {
+                const cell = document.createElement('div');
+                cell.className = `relative rounded-md flex items-center justify-center cursor-pointer transition border border-slate-800/80 aspect-square ${getCellBaseColor(i)}`;
+                cell.id = `cell-${i}`;
+                cell.onclick = () => onCellClick(i);
+                
+                // Desenhar peça se houver
+                const piece = board[i];
+                if (piece) {
+                    const isPlayerPiece = piece.owner === 'player';
+                    const config = PATENTES[piece.type];
+                    
+                    const pieceEl = document.createElement('div');
+                    pieceEl.className = `w-11/12 h-11/12 rounded-lg flex flex-col items-center justify-center font-bold text-xs select-none shadow-md border ${
+                        isPlayerPiece 
+                            ? `${config.cor} border-b-4 hover:brightness-110 active:scale-95` 
+                            : 'bg-rose-950 border-rose-700 text-rose-300 border-b-4'
+                    }`;
+
+                    if (isPlayerPiece) {
+                        // O jogador vê todas as suas peças normalmente
+                        pieceEl.innerHTML = `
+                            <div class="scale-90 flex flex-col items-center">
+                                ${getSvgIcon(config.icon, "w-4 h-4 mb-0.5")}
+                                <span class="text-[10px] tracking-tight block">${config.sigla}</span>
+                            </div>
+                        `;
+                    } else {
+                        // Oponente: Esconder do jogador (Fog of War)
+                        // A não ser que esteja revelada (no combate)
+                        if (piece.revealed) {
+                            pieceEl.innerHTML = `
+                                <div class="scale-90 flex flex-col items-center">
+                                    ${getSvgIcon(config.icon, "w-4 h-4 mb-0.5")}
+                                    <span class="text-[10px] tracking-tight block">${config.sigla}</span>
+                                </div>
+                            `;
+                        } else {
+                            pieceEl.innerHTML = `
+                                <div class="scale-90 flex flex-col items-center text-rose-400">
+                                    ${getSvgIcon('question', "w-5 h-5")}
+                                    <span class="text-[8px] uppercase tracking-wider">Oculto</span>
+                                </div>
+                            `;
+                        }
+                    }
+
+                    cell.appendChild(pieceEl);
+                }
+
+                boardEl.appendChild(cell);
+            }
+            lucide.createIcons();
+        }
+
+        // Definir a cor base da célula no tabuleiro para melhor visualização tática
+        function getCellBaseColor(index) {
+            const row = Math.floor(index / 10);
+            const col = index % 10;
+            const isEven = (row + col) % 2 === 0;
+
+            // Áreas de posicionamento do Jogador e do Inimigo na fase de Setup
+            if (gameState === 'SETUP') {
+                if (row >= 8) return isEven ? 'bg-emerald-950/20 hover:bg-emerald-950/40' : 'bg-emerald-900/10 hover:bg-emerald-950/40';
+                if (row <= 1) return isEven ? 'bg-rose-950/20' : 'bg-rose-900/10';
+            }
+            
+            // Cores padrão pós-setup
+            return isEven ? 'bg-slate-900' : 'bg-slate-950';
+        }
+
+        // Destacar células válidas para posicionamento
+        function highlightPlacementZones() {
+            for (let i = 0; i < 100; i++) {
+                const cell = document.getElementById(`cell-${i}`);
+                cell.classList.remove('ring-2', 'ring-emerald-500', 'bg-emerald-900/30');
+                
+                if (selectedPatenteForPlacement && gameState === 'SETUP') {
+                    const row = Math.floor(i / 10);
+                    if (row >= 8 && !board[i]) {
+                        cell.classList.add('ring-2', 'ring-emerald-500/50', 'bg-emerald-900/30');
+                    }
+                }
+            }
+        }
+
+        // Clicar numa Célula do Tabuleiro
+        function onCellClick(index) {
+            if (gameState === 'SETUP') {
+                handleSetupClick(index);
+            } else if (gameState === 'PLAYER_TURN') {
+                handleGameplayClick(index);
+            }
+        }
+
+        // Processo de Posicionamento Manual do Jogador
+        function handleSetupClick(index) {
+            const row = Math.floor(index / 10);
+            
+            // Só pode colocar nas duas linhas inferiores (8 e 9)
+            if (row < 8) return;
+
+            // Se houver peça no local, devolver para o inventário
+            if (board[index]) {
+                const piece = board[index];
+                if (piece.owner === 'player') {
+                    playSound('click');
+                    playerInventory[piece.type]++;
+                    board[index] = null;
+                    selectedPatenteForPlacement = piece.type; // auto-seleciona para rápida recolocação
+                    renderBoard();
+                    renderSetupInventory();
+                    highlightPlacementZones();
+                    atualizarContadoresAtivos();
+                }
+                return;
+            }
+
+            // Se tiver patente selecionada e houver cota restante, posicionar
+            if (selectedPatenteForPlacement && playerInventory[selectedPatenteForPlacement] > 0) {
+                playSound('place');
+                board[index] = {
+                    type: selectedPatenteForPlacement,
+                    owner: 'player',
+                    revealed: false
+                };
+                playerInventory[selectedPatenteForPlacement]--;
+                
+                // Se zerou o inventário da patente atual, limpar seleção
+                if (playerInventory[selectedPatenteForPlacement] === 0) {
+                    selectedPatenteForPlacement = null;
+                }
+
+                renderBoard();
+                renderSetupInventory();
+                highlightPlacementZones();
+                atualizarContadoresAtivos();
+            }
+        }
+
+        // Autofill do Jogador (Posicionamento Tático Rápido)
+        function autoColocarJogador() {
+            playSound('place');
+            initInventory();
+            // Limpar linhas do jogador
+            for (let i = 80; i < 100; i++) {
+                board[i] = null;
+            }
+
+            // Obter células disponíveis (linhas 8 e 9)
+            let disponiveis = [];
+            for (let i = 80; i < 100; i++) disponiveis.push(i);
+            
+            // Baralhar posições
+            disponiveis.sort(() => Math.random() - 0.5);
+
+            // Inserir todas as peças em posições aleatórias nas linhas 8-9
+            let posIdx = 0;
+            for (let type in PATENTES) {
+                const qtd = PATENTES[type].qtd;
+                for (let q = 0; q < qtd; q++) {
+                    const boardIndex = disponiveis[posIdx++];
+                    board[boardIndex] = {
+                        type: type,
+                        owner: 'player',
+                        revealed: false
+                    };
+                    playerInventory[type]--;
+                }
+            }
+
+            selectedPatenteForPlacement = null;
+            renderBoard();
+            renderSetupInventory();
+            atualizarContadoresAtivos();
+            addLog("Tropa posicionada automaticamente de forma aleatória.", "neutral");
+        }
+
+        // Posicionar Exército do Computador (IA) - Totalmente Oculto
+        function autoColocarIA() {
+            // Limpar linhas da IA (0 e 1)
+            for (let i = 0; i < 20; i++) {
+                board[i] = null;
+            }
+
+            // Obter células disponíveis (linhas 0 e 1)
+            let disponiveis = [];
+            for (let i = 0; i < 20; i++) disponiveis.push(i);
+            disponiveis.sort(() => Math.random() - 0.5);
+
+            // Peças da IA
+            let posIdx = 0;
+            for (let type in PATENTES) {
+                const qtd = PATENTES[type].qtd;
+                for (let q = 0; q < qtd; q++) {
+                    const boardIndex = disponiveis[posIdx++];
+                    board[boardIndex] = {
+                        type: type,
+                        owner: 'ai',
+                        revealed: false
+                    };
+                }
+            }
+        }
+
+        // Confirmar posicionamento e iniciar a batalha
+        function confirmarPosicionamento() {
+            // Verificar se todas as peças foram colocadas
+            let totalRemaining = 0;
+            for (let k in playerInventory) totalRemaining += playerInventory[k];
+
+            if (totalRemaining > 0) return;
+
+            gameState = 'PLAYER_TURN';
+            document.getElementById('game-state-label').innerText = 'SEU TURNO';
+            document.getElementById('game-state-label').className = 'font-semibold text-emerald-400';
+            
+            // Esconder botões de posicionamento
+            document.getElementById('btn-auto-place').classList.add('hidden');
+            document.getElementById('btn-start-game').classList.add('hidden');
+
+            // Atualizar descrição para modo Combate
+            document.getElementById('instruction-panel').innerHTML = `
+                <p class="font-bold text-amber-400 mb-1">Modo Batalha:</p>
+                As peças movem-se 1 quadrado nas direções ortogonais (cima, baixo, esquerda ou direita). 
+                Selecione uma de suas peças verdes e escolha o destino destacado. Atacar revela a identidade das patentes envolvidas!
+            `;
+
+            autoColocarIA();
+            renderBoard();
+            renderSetupInventory();
+            atualizarContadoresAtivos();
+            
+            playSound('combat_win');
+            addLog("A BATALHA COMEÇOU! Planeie os seus movimentos com cuidado.", "neutral");
+        }
+
+        // Lógica de Movimentação em Gameplay
+        function handleGameplayClick(index) {
+            // Se houver uma peça sua selecionada e o clique for em um movimento possível
+            if (lastSelectedPieceToMove !== null && possibleMoves.includes(index)) {
+                executarMovimento(lastSelectedPieceToMove, index);
+                clearHighlights();
+                lastSelectedPieceToMove = null;
+                possibleMoves = [];
+                return;
+            }
+
+            // Se clicar numa peça do próprio jogador, selecioná-la
+            const piece = board[index];
+            if (piece && piece.owner === 'player') {
+                // Bombas não podem ser movidas!
+                if (piece.type === 'bomba') {
+                    addLog("As bombas são fixas e servem de defesa. Não as pode mover!", "neutral");
+                    return;
+                }
+
+                playSound('click');
+                lastSelectedPieceToMove = index;
+                calcularMovimentosPossiveis(index);
+                highlightMovimentos();
+            } else {
+                // Clique inválido ou célula vazia -> limpar seleção
+                clearHighlights();
+                lastSelectedPieceToMove = null;
+                possibleMoves = [];
+            }
+        }
+
+        // Calcular movimentos válidos de 1 passo em cruz (ortogonal)
+        function calcularMovimentosPossiveis(index) {
+            possibleMoves = [];
+            const row = Math.floor(index / 10);
+            const col = index % 10;
+
+            const direcoes = [
+                { r: -1, c: 0 }, // Cima
+                { r: 1, c: 0 },  // Baixo
+                { r: 0, c: -1 }, // Esquerda
+                { r: 0, c: 1 }   // Direita
+            ];
+
+            direcoes.forEach(dir => {
+                const targetRow = row + dir.r;
+                const targetCol = col + dir.c;
+                
+                if (targetRow >= 0 && targetRow < 10 && targetCol >= 0 && targetCol < 10) {
+                    const targetIndex = targetRow * 10 + targetCol;
+                    const destPiece = board[targetIndex];
+
+                    // Movimento livre ou Captura (não pode capturar as próprias peças)
+                    if (!destPiece || destPiece.owner !== 'player') {
+                        possibleMoves.push(targetIndex);
+                    }
+                }
+            });
+        }
+
+        // Destacar movimentos possíveis graficamente
+        function highlightMovimentos() {
+            clearHighlights();
+            
+            // Destacar célula selecionada
+            if (lastSelectedPieceToMove !== null) {
+                const selectedCell = document.getElementById(`cell-${lastSelectedPieceToMove}`);
+                selectedCell.classList.add('ring-4', 'ring-emerald-500');
+            }
+
+            // Destacar opções de movimento
+            possibleMoves.forEach(idx => {
+                const cell = document.getElementById(`cell-${idx}`);
+                if (board[idx] && board[idx].owner === 'ai') {
+                    // Se tiver inimigo, destacar em vermelho para indicar ataque
+                    cell.classList.add('bg-red-950/40', 'ring-2', 'ring-red-600/50');
+                } else {
+                    cell.classList.add('bg-emerald-950/30', 'ring-2', 'ring-emerald-600/40');
+                }
+            });
+        }
+
+        function clearHighlights() {
+            for (let i = 0; i < 100; i++) {
+                const cell = document.getElementById(`cell-${i}`);
+                cell.className = `relative rounded-md flex items-center justify-center cursor-pointer transition border border-slate-800/80 aspect-square ${getCellBaseColor(i)}`;
+            }
+        }
+
+        // Executar Movimentação (Jogador ou IA)
+        function executarMovimento(de, para, isAI = false) {
+            const piece = board[de];
+            const destPiece = board[para];
+
+            if (!piece) return;
+
+            // Registar movimento na inteligência artificial para que saiba que não é bomba
+            if (!isAI) {
+                playerPiecesMoved.add(para);
+            }
+
+            if (!destPiece) {
+                // Apenas movimento para célula vazia
+                board[para] = piece;
+                board[de] = null;
+                
+                const pat = PATENTES[piece.type];
+                const quem = isAI ? "Inimigo" : "Você";
+                const catLog = isAI ? 'ai' : 'player';
+                addLog(`${quem} moveu um ${pat.nome} para a célula [${Math.floor(para/10)}, ${para%10}].`, catLog);
+                
+                playSound('place');
+                renderBoard();
+                
+                // Passar o turno
+                trocarTurno();
+            } else {
+                // Combate tático!
+                resolverCombate(de, para, isAI);
+            }
+        }
+
+        // Lógica de Resolução de Batalha (Combate Oculto)
+        function resolverCombate(de, para, isAI) {
+            const atacante = board[de];
+            const defensor = board[para];
+
+            // Tornar ambas visíveis temporariamente no Log e Tabuleiro
+            atacante.revealed = true;
+            defensor.revealed = true;
+            renderBoard();
+
+            const pAtacante = PATENTES[atacante.type];
+            const pDefensor = PATENTES[defensor.type];
+
+            // Atualizar Painel de Combate Ativo
+            document.getElementById('active-combat-panel').classList.remove('hidden');
+            document.getElementById('combat-player-name').innerText = isAI ? pDefensor.nome : pAtacante.nome;
+            document.getElementById('combat-ai-name').innerText = isAI ? pAtacante.nome : pDefensor.nome;
+
+            let resultado = ""; // "win", "lose", "tie" (em relação ao atacante)
+            
+            // Regra Especial: Espião vs General
+            if (atacante.type === 'espiao' && defensor.type === 'general') {
+                resultado = "win";
+            }
+            // Regra Especial: Bomba
+            else if (defensor.type === 'bomba') {
+                if (atacante.type === 'cabo') {
+                    // Cabo desarma a bomba!
+                    resultado = "win";
+                } else {
+                    // Qualquer outro bate na bomba e explode
+                    resultado = "lose_to_bomb";
+                }
+            } 
+            // Combate Hierárquico Padrão
+            else {
+                if (pAtacante.forca > pDefensor.forca) {
+                    resultado = "win";
+                } else if (pAtacante.forca < pDefensor.forca) {
+                    resultado = "lose";
+                } else {
+                    resultado = "tie";
+                }
+            }
+
+            // Aplicar os resultados no tabuleiro e enviar para Logs
+            const atacanteDesc = `${isAI ? "Inimigo" : "Jogador"} (${pAtacante.nome})`;
+            const defensorDesc = `${isAI ? "Jogador" : "Inimigo"} (${pDefensor.nome})`;
+
+            if (resultado === "win") {
+                // Atacante assume a posição do defensor
+                board[para] = atacante;
+                board[de] = null;
+
+                const vitoriosoText = `${pAtacante.nome} derrotou o ${pDefensor.nome}!`;
+                document.getElementById('combat-result-text').innerText = vitoriosoText;
+
+                if (!isAI) {
+                    playSound('combat_win');
+                    addLog(`Combate: Seu ${pAtacante.nome} atacou e eliminou o ${pDefensor.nome} inimigo!`, 'combat_win');
+                } else {
+                    playSound('combat_lose');
+                    addLog(`Combate: ${pAtacante.nome} inimigo atacou e eliminou o seu ${pDefensor.nome}!`, 'combat_lose');
+                }
+            } 
+            else if (resultado === "lose") {
+                // Atacante morre, defensor continua no mesmo sítio
+                board[de] = null;
+
+                const vitoriosoText = `${pDefensor.nome} defendeu e eliminou o ${pAtacante.nome}!`;
+                document.getElementById('combat-result-text').innerText = vitoriosoText;
+
+                if (!isAI) {
+                    playSound('combat_lose');
+                    addLog(`Combate: Seu ${pAtacante.nome} atacou o ${pDefensor.nome} inimigo e falhou, sendo eliminado!`, 'combat_lose');
+                } else {
+                    playSound('combat_win');
+                    addLog(`Combate: Seu ${pDefensor.nome} defendeu e eliminou o ${pAtacante.nome} inimigo atacante!`, 'combat_win');
+                }
+            } 
+            else if (resultado === "lose_to_bomb") {
+                // Atacante bateu na bomba e explodiu. O atacante morre. A bomba continua.
+                board[de] = null;
+                playSound('bomb');
+
+                document.getElementById('combat-result-text').innerText = `A Bomba explodiu o ${pAtacante.nome}!`;
+
+                if (!isAI) {
+                    addLog(`Armadilha: Seu ${pAtacante.nome} atacou uma Bomba inimiga oculta e explodiu!`, 'combat_lose');
+                } else {
+                    addLog(`Armadilha: O ${pAtacante.nome} inimigo atacou a sua Bomba oculta e explodiu!`, 'combat_win');
+                }
+            }
+            else if (resultado === "tie") {
+                // Empate - Ambos morrem
+                board[de] = null;
+                board[para] = null;
+
+                document.getElementById('combat-result-text').innerText = `Ambos eliminados (Empate)!`;
+                playSound('combat_lose');
+
+                addLog(`Combate: O ${pAtacante.nome} e o ${pDefensor.nome} enfrentaram-se de igual para igual. Ambos caíram em batalha!`, 'combat_tie');
+            }
+
+            // Guardar o que a IA aprendeu após a revelação
+            if (!isAI) {
+                // Se o jogador atacou, a IA sabe a patente do atacante se sobreviveu
+                if (board[para] === atacante) {
+                    aiKnownPlayerPieces[para] = atacante.type;
+                }
+            } else {
+                // Se a IA atacou, ela agora conhece a identidade do defensor (se sobreviveu)
+                if (board[para] === defensor) {
+                    aiKnownPlayerPieces[para] = defensor.type;
+                }
+            }
+
+            // Ocultar as peças novamente no próximo ciclo se sobreviveram (mantendo apenas as que ainda não jogaram ou estão reveladas)
+            setTimeout(() => {
+                if (board[para]) board[para].revealed = false;
+                renderBoard();
+            }, 1200);
+
+            renderBoard();
+            atualizarContadoresAtivos();
+            verificarCondicaoVitoria();
+
+            if (gameState !== 'GAME_OVER') {
+                trocarTurno();
+            }
+        }
+
+        // Controlar troca de turno
+        function trocarTurno() {
+            if (gameState === 'PLAYER_TURN') {
+                gameState = 'AI_TURN';
+                document.getElementById('game-state-label').innerText = 'COMPUTADOR A PENSAR...';
+                document.getElementById('game-state-label').className = 'font-semibold text-rose-500 animate-pulse';
+                
+                // Timer rápido para simular o "pensamento" da Inteligência Artificial
+                setTimeout(jogarIA, 1200);
+            } else if (gameState === 'AI_TURN') {
+                gameState = 'PLAYER_TURN';
+                document.getElementById('game-state-label').innerText = 'SEU TURNO';
+                document.getElementById('game-state-label').className = 'font-semibold text-emerald-400';
+            }
+        }
+
+        // Lógica de Contadores de Peças Ativas no Painel do Tabuleiro
+        function atualizarContadoresAtivos() {
+            let playerActive = 0;
+            let playerDead = 14;
+            let aiActive = 0;
+
+            for (let i = 0; i < 100; i++) {
+                const piece = board[i];
+                if (piece) {
+                    if (piece.owner === 'player') {
+                        playerActive++;
+                    } else {
+                        aiActive++;
+                    }
+                }
+            }
+
+            playerDead = 14 - playerActive;
+
+            document.getElementById('count-player-active').innerText = playerActive;
+            document.getElementById('count-player-dead').innerText = playerDead;
+        }
+
+        // Validar Condição de Vitória (Capturar o General adversário ou não haver peças de movimento)
+        function verificarCondicaoVitoria() {
+            let playerHasGeneral = false;
+            let aiHasGeneral = false;
+            
+            let playerHasMobilePieces = false;
+            let aiHasMobilePieces = false;
+
+            for (let i = 0; i < 100; i++) {
+                const piece = board[i];
+                if (piece) {
+                    if (piece.owner === 'player') {
+                        if (piece.type === 'general') playerHasGeneral = true;
+                        if (piece.type !== 'bomba') playerHasMobilePieces = true;
+                    } else {
+                        if (piece.type === 'general') aiHasGeneral = true;
+                        if (piece.type !== 'bomba') aiHasMobilePieces = true;
+                    }
+                }
+            }
+
+            // Se um dos generais foi capturado
+            if (!aiHasGeneral) {
+                concluirJogo('vitoria');
+            } else if (!playerHasGeneral) {
+                concluirJogo('derrota');
+            }
+            // Se um dos lados não tem mais peças capazes de se mover
+            else if (!playerHasMobilePieces) {
+                concluirJogo('derrota_sem_movimentos');
+            } else if (!aiHasMobilePieces) {
+                concluirJogo('vitoria_sem_movimentos');
+            }
+        }
+
+        function concluirJogo(resultado) {
+            gameState = 'GAME_OVER';
+            const modal = document.getElementById('game-over-modal');
+            const icon = document.getElementById('game-over-icon');
+            const iconContainer = document.getElementById('game-over-icon-container');
+            const title = document.getElementById('game-over-title');
+            const msg = document.getElementById('game-over-message');
+
+            modal.classList.remove('hidden');
+
+            if (resultado === 'vitoria' || resultado === 'vitoria_sem_movimentos') {
+                iconContainer.className = "w-20 h-20 rounded-full mx-auto flex items-center justify-center mb-4 bg-emerald-950 border-2 border-emerald-500 text-emerald-400";
+                icon.outerHTML = getSvgIcon('crown', "w-10 h-10 text-emerald-400");
+                title.innerText = "VITÓRIA TÁTICA!";
+                title.className = "text-3xl font-bold font-military tracking-wider mb-2 text-emerald-400";
+                msg.innerText = resultado === 'vitoria' 
+                    ? "Excelente comandante! O General inimigo foi capturado com sucesso." 
+                    : "Vitória por Superioridade! O exército inimigo foi imobilizado.";
+                addLog("VITÓRIA DA CAMPANHA! Conseguiu derrotar o computador.", "combat_win");
+                playSound('combat_win');
+            } else {
+                iconContainer.className = "w-20 h-20 rounded-full mx-auto flex items-center justify-center mb-4 bg-rose-950 border-2 border-rose-500 text-rose-400";
+                icon.outerHTML = getSvgIcon('shield-alert', "w-10 h-10 text-rose-400");
+                title.innerText = "EXÉRCITO DERROTADO";
+                title.className = "text-3xl font-bold font-military tracking-wider mb-2 text-rose-500";
+                msg.innerText = resultado === 'derrota'
+                    ? "Infelizmente o seu General foi capturado. Reorganize a sua tática para a próxima."
+                    : "Derrota por Imobilização. Não lhe restam mais tropas capazes de avançar.";
+                addLog("DERROTA! O computador dominou a sua tática militar.", "combat_lose");
+                playSound('combat_lose');
+            }
+        }
+
+        // ==========================================
+        // INTELIGÊNCIA ARTIFICIAL (IA) DO COMPUTADOR
+        // ==========================================
+        function jogarIA() {
+            if (gameState !== 'AI_TURN') return;
+
+            // 1. Encontrar todas as peças da IA que podem se mover
+            let pecasDisponiveis = [];
+            for (let i = 0; i < 100; i++) {
+                const piece = board[i];
+                if (piece && piece.owner === 'ai' && piece.type !== 'bomba') {
+                    pecasDisponiveis.push(i);
+                }
+            }
+
+            if (pecasDisponiveis.length === 0) {
+                verificarCondicaoVitoria();
+                return;
+            }
+
+            // Guardará todos os movimentos possíveis mapeados por utilidade: { de, para, prioridade, score }
+            let movimentosMapeados = [];
+
+            pecasDisponiveis.forEach(de => {
+                const row = Math.floor(de / 10);
+                const col = de % 10;
+                const piece = board[de];
+                const pAtacante = PATENTES[piece.type];
+
+                // Verificar adjacentes
+                const direcoes = [
+                    { r: -1, c: 0 }, { r: 1, c: 0 }, { r: 0, c: -1 }, { r: 0, c: 1 }
+                ];
+
+                direcoes.forEach(dir => {
+                    const targetRow = row + dir.r;
+                    const targetCol = col + dir.c;
+
+                    if (targetRow >= 0 && targetRow < 10 && targetCol >= 0 && targetCol < 10) {
+                        const para = targetRow * 10 + targetCol;
+                        const destPiece = board[para];
+
+                        if (!destPiece || destPiece.owner === 'player') {
+                            let score = 0;
+                            let prioridade = "normal"; // normal, ataque, defensivo
+
+                            if (destPiece) {
+                                // Temos um ataque em potencial!
+                                // A IA avalia se sabe qual é a sua peça ou se precisa de deduzir.
+                                const isPieceMoved = playerPiecesMoved.has(para);
+                                const knownType = aiKnownPlayerPieces[para];
+
+                                if (knownType) {
+                                    // A IA SABE EXATAMENTE QUEM É
+                                    const pDef = PATENTES[knownType];
+                                    if (piece.type === 'espiao' && knownType === 'general') {
+                                        score = 1000; // Captura imediata do General!
+                                        prioridade = "ataque";
+                                    } else if (knownType === 'bomba') {
+                                        if (piece.type === 'cabo') {
+                                            score = 200; // Cabo desarmando bomba
+                                            prioridade = "ataque";
+                                        } else {
+                                            score = -100; // Evitar bombas conhecidas
+                                        }
+                                    } else if (pAtacante.forca > pDef.forca) {
+                                        score = pDef.forca * 10; // Atacar mais fracas conhecidas
+                                        prioridade = "ataque";
+                                    } else if (pAtacante.forca < pDef.forca) {
+                                        score = -50; // Não se suicidar
+                                    } else {
+                                        score = -10; // Evitar empate se puder escolher melhor
+                                    }
+                                } else {
+                                    // A IA NÃO SABE QUAL É A PEÇA (Fog of war)
+                                    // Regras inteligentes sem ler a memória do jogador:
+                                    if (isPieceMoved) {
+                                        // A IA sabe que NÃO é bomba porque a peça já se moveu!
+                                        // Vale a pena arriscar um combate estratégico com as suas peças fortes
+                                        if (pAtacante.forca >= 5) {
+                                            score = 20; // Arriscar com capitão/major/general
+                                            prioridade = "ataque";
+                                        } else if (piece.type === 'soldado') {
+                                            score = 15; // Usar soldado para descobrir/limpar campo
+                                        } else {
+                                            score = 5;
+                                        }
+                                    } else {
+                                        // A peça nunca se moveu. Pode ser uma Bomba ou o General estacionado!
+                                        if (piece.type === 'cabo') {
+                                            // Cabo é excelente para testar peças que não se movem (pode desarmar bombar!)
+                                            score = 45;
+                                            prioridade = "ataque";
+                                        } else if (piece.type === 'soldado') {
+                                            // Usar soldado como sonda para forçar revelação de bombas
+                                            score = 25;
+                                            prioridade = "ataque";
+                                        } else if (pAtacante.forca >= 6) {
+                                            // Peças de elite não devem atacar aleatoriamente alvos estáticos (risco alto de bomba)
+                                            score = -15;
+                                        } else {
+                                            score = 5;
+                                        }
+                                    }
+                                }
+                            } else {
+                                // Movimento para célula vazia
+                                // Favorecer avançar taticamente para o lado do jogador
+                                const progressao = targetRow - row; // Positivo avança em direção ao jogador (linhas maiores)
+                                if (progressao > 0) {
+                                    score = 5; // Recompensa por avançar
+                                } else if (progressao < 0) {
+                                    score = 1; // Recuar tem score menor mas é válido
+                                } else {
+                                    score = 2; // Movimento lateral
+                                }
+
+                                // Se estiver muito perto do fim, incentivar a invadir
+                                if (targetRow >= 8) {
+                                    score += 4;
+                                }
+                            }
+
+                            movimentosMapeados.push({ de, para, score, prioridade });
+                        }
+                    }
+                });
+            });
+
+            // 2. Ordenar os movimentos mapeados por score (melhor primeiro)
+            movimentosMapeados.sort((a, b) => b.score - a.score);
+
+            // Se não houver movimentos, o jogo termina por imobilização
+            if (movimentosMapeados.length === 0) {
+                verificarCondicaoVitoria();
+                return;
+            }
+
+            // Selecionar o melhor movimento disponível, ou um de topo para dar variabilidade inteligente
+            const melhoresMovimentos = movimentosMapeados.filter(m => m.score === movimentosMapeados[0].score);
+            const escolhaFinal = melhoresMovimentos[Math.floor(Math.random() * melhoresMovimentos.length)];
+
+            // Executar movimento selecionado pela IA
+            executarMovimento(escolhaFinal.de, escolhaFinal.para, true);
+        }
+
+        // Reiniciar todo o Jogo do Zero
+        function reiniciarJogo() {
+            playSound('place');
+            initInventory();
+            initBoard();
+            gameState = 'SETUP';
+
+            // Ajustar interface
+            document.getElementById('game-state-label').innerText = 'FASE DE POSICIONAMENTO';
+            document.getElementById('game-state-label').className = 'font-semibold text-emerald-400';
+            document.getElementById('btn-auto-place').classList.remove('hidden');
+            document.getElementById('btn-start-game').classList.remove('hidden');
+            document.getElementById('active-combat-panel').classList.add('hidden');
+            document.getElementById('game-over-modal').classList.add('hidden');
+
+            document.getElementById('instruction-panel').innerHTML = `
+                <p class="font-bold text-emerald-400 mb-1">Fase de Preparação:</p>
+                Selecione uma patente abaixo e clique nas posições destacadas em verde no tabuleiro (linhas 8 e 9) para posicionar o seu exército taticamente.
+            `;
+
+            renderBoard();
+            renderSetupInventory();
+            atualizarContadoresAtivos();
+            
+            document.getElementById('logs-container').innerHTML = `<div class="text-slate-500 italic">Nova campanha tática iniciada. Aguardando posicionamento...</div>`;
+        }
+
+        // Ao Carregar Página pela primeira vez
+        window.onload = function() {
+            initInventory();
+            initBoard();
+            renderBoard();
+            renderSetupInventory();
+            atualizarContadoresAtivos();
+        };
+    </script>
+</body>
+</html>
+
+```
